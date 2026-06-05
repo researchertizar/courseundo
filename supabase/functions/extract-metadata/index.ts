@@ -1,7 +1,7 @@
 // ==========================================================================
-// Edge Function: extract-metadata (FIXED)
+// Edge Function: extract-metadata (FIXED v2)
 // Purpose: Fetch course title, platform, description from a URL
-// Primary: Mate.tools | Fallback: OpenUnfurl | Last resort: URL parsing
+// Primary: Mate.tools | Fallback: OpenUnfurl | Last resort: Direct HTML
 // ==========================================================================
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
@@ -14,6 +14,7 @@ const CORS_HEADERS = {
     "Content-Type": "application/json",
 };
 
+// ---- Helper: Guess platform from URL hostname ----
 function extractPlatformFromUrl(url: string): string {
     try {
         const hostname = new URL(url).hostname.toLowerCase();
@@ -29,8 +30,8 @@ function extractPlatformFromUrl(url: string): string {
         if (hostname.includes("pluralsight")) return "Pluralsight";
         if (hostname.includes("skillshare")) return "Skillshare";
         if (hostname.includes("datacamp")) return "DataCamp";
-        if (hostname.includes("google.com/learn") || hostname.includes("cloud.google.com/learn")) return "Google Cloud";
-        if (hostname.includes("aws.training") || hostname.includes("aws.amazon.com/training")) return "AWS";
+        if (hostname.includes("google.com/learn")) return "Google Cloud";
+        if (hostname.includes("aws.training")) return "AWS";
         if (hostname.includes("microsoft.com/learn")) return "Microsoft Learn";
         return "Other";
     } catch {
@@ -38,27 +39,32 @@ function extractPlatformFromUrl(url: string): string {
     }
 }
 
-function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+// ---- Helper: Fetch with manual timeout ----
+function fetchWithTimeout(
+    url: string,
+    options: RequestInit,
+    timeoutMs: number
+): Promise<Response> {
     return new Promise((resolve, reject) => {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
+        const timer = setTimeout(() => {
             controller.abort();
             reject(new Error(`Request timed out after ${timeoutMs}ms`));
         }, timeoutMs);
 
         fetch(url, { ...options, signal: controller.signal })
             .then((response) => {
-                clearTimeout(timeoutId);
+                clearTimeout(timer);
                 resolve(response);
             })
             .catch((err) => {
-                clearTimeout(timeoutId);
+                clearTimeout(timer);
                 reject(err);
             });
     });
 }
 
-// ---- Mate.tools (Primary) ----
+// ---- Source 1: Mate.tools (Primary) ----
 async function fetchFromMateTools(url: string): Promise<any | null> {
     try {
         console.log("[extract-metadata] Trying Mate.tools for:", url);
@@ -76,12 +82,12 @@ async function fetchFromMateTools(url: string): Promise<any | null> {
         console.log("[extract-metadata] Mate.tools status:", response.status);
 
         if (!response.ok) {
-            console.warn("[extract-metadata] Mate.tools failed with status:", response.status);
+            console.warn("[extract-metadata] Mate.tools error status:", response.status);
             return null;
         }
 
         const data = await response.json();
-        console.log("[extract-metadata] Mate.tools response keys:", Object.keys(data));
+        console.log("[extract-metadata] Mate.tools keys:", Object.keys(data));
 
         const title = data.title || data.ogTitle || data.pageTitle || data.metaTitle || "";
         const siteName = data.siteName || data.ogSiteName || "";
@@ -93,39 +99,35 @@ async function fetchFromMateTools(url: string): Promise<any | null> {
         }
 
         return {
-            title: (title || "").substring(0, 200),
-            platform: siteName || extractPlatformFromUrl(url),
-            description: (description || "").substring(0, 2000),
+            title: (title || "").substring(0, 200).trim(),
+            platform: siteName ? siteName.trim() : extractPlatformFromUrl(url),
+            description: (description || "").substring(0, 2000).trim(),
             source: "mate.tools",
         };
     } catch (err) {
-        console.error("[extract-metadata] Mate.tools error:", err.message || err);
+        console.error("[extract-metadata] Mate.tools failed:", String(err));
         return null;
     }
 }
 
-// ---- OpenUnfurl (Fallback) ----
+// ---- Source 2: OpenUnfurl (Fallback) ----
 async function fetchFromOpenUnfurl(url: string): Promise<any | null> {
     try {
         console.log("[extract-metadata] Trying OpenUnfurl for:", url);
 
         const apiUrl = `https://openunfurl.com/api/v1/metadata?url=${encodeURIComponent(url)}`;
 
-        const response = await fetchWithTimeout(
-            apiUrl,
-            { method: "GET" },
-            8000
-        );
+        const response = await fetchWithTimeout(apiUrl, { method: "GET" }, 8000);
 
         console.log("[extract-metadata] OpenUnfurl status:", response.status);
 
         if (!response.ok) {
-            console.warn("[extract-metadata] OpenUnfurl failed with status:", response.status);
+            console.warn("[extract-metadata] OpenUnfurl error status:", response.status);
             return null;
         }
 
         const data = await response.json();
-        console.log("[extract-metadata] OpenUnfurl response keys:", Object.keys(data));
+        console.log("[extract-metadata] OpenUnfurl keys:", Object.keys(data));
 
         const title = data.title || data.og_title || "";
         const siteName = data.site_name || data.og_site_name || "";
@@ -137,21 +139,21 @@ async function fetchFromOpenUnfurl(url: string): Promise<any | null> {
         }
 
         return {
-            title: (title || "").substring(0, 200),
-            platform: siteName || extractPlatformFromUrl(url),
-            description: (description || "").substring(0, 2000),
+            title: (title || "").substring(0, 200).trim(),
+            platform: siteName ? siteName.trim() : extractPlatformFromUrl(url),
+            description: (description || "").substring(0, 2000).trim(),
             source: "openunfurl",
         };
     } catch (err) {
-        console.error("[extract-metadata] OpenUnfurl error:", err.message || err);
+        console.error("[extract-metadata] OpenUnfurl failed:", String(err));
         return null;
     }
 }
 
-// ---- Direct HTML Fetch (Last Resort) ----
-async function fetchDirectFromUrl(url: string): Promise<any | null> {
+// ---- Source 3: Direct HTML scrape (Last resort) ----
+async function fetchFromDirectHtml(url: string): Promise<any | null> {
     try {
-        console.log("[extract-metadata] Trying direct fetch for:", url);
+        console.log("[extract-metadata] Trying direct HTML fetch for:", url);
 
         const response = await fetchWithTimeout(
             url,
@@ -159,8 +161,9 @@ async function fetchDirectFromUrl(url: string): Promise<any | null> {
                 method: "GET",
                 headers: {
                     "User-Agent": "Mozilla/5.0 (compatible; CourseundoBot/1.0)",
-                    "Accept": "text/html",
+                    "Accept": "text/html,application/xhtml+xml",
                 },
+                redirect: "follow",
             },
             8000
         );
@@ -172,21 +175,36 @@ async function fetchDirectFromUrl(url: string): Promise<any | null> {
             return null;
         }
 
-        const html = await response.text();
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.includes("text/html") && !contentType.includes("text/plain")) {
+            console.warn("[extract-metadata] Response is not HTML:", contentType);
+            return null;
+        }
 
-        // Extract title from <title> tag
+        const html = await response.text();
+        console.log("[extract-metadata] HTML length:", html.length);
+
+        // Extract from HTML tags
+        const ogTitleMatch = html.match(
+            /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i
+        );
         const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-        const ogTitleMatch = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i);
-        const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]+)"/i);
-        const ogDescMatch = html.match(/<meta\s+property="og:description"\s+content="([^"]+)"/i);
-        const siteNameMatch = html.match(/<meta\s+property="og:site_name"\s+content="([^"]+)"/i);
+        const ogDescMatch = html.match(
+            /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i
+        );
+        const descMatch = html.match(
+            /<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i
+        );
+        const siteNameMatch = html.match(
+            /<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i
+        );
 
         const title = ogTitleMatch?.[1] || titleMatch?.[1] || "";
         const siteName = siteNameMatch?.[1] || "";
         const description = ogDescMatch?.[1] || descMatch?.[1] || "";
 
         if (!title && !siteName) {
-            console.warn("[extract-metadata] Direct fetch found no metadata in HTML");
+            console.warn("[extract-metadata] No metadata found in HTML");
             return null;
         }
 
@@ -197,7 +215,7 @@ async function fetchDirectFromUrl(url: string): Promise<any | null> {
             source: "direct_html",
         };
     } catch (err) {
-        console.error("[extract-metadata] Direct fetch error:", err.message || err);
+        console.error("[extract-metadata] Direct HTML fetch failed:", String(err));
         return null;
     }
 }
@@ -206,7 +224,6 @@ async function fetchDirectFromUrl(url: string): Promise<any | null> {
 serve(async (req: Request) => {
     // CORS preflight
     if (req.method === "OPTIONS") {
-        console.log("[extract-metadata] CORS preflight received");
         return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
@@ -222,7 +239,7 @@ serve(async (req: Request) => {
     }
 
     try {
-        console.log("[extract-metadata] Request received");
+        console.log("[extract-metadata] === New request ===");
 
         // Parse body
         let body: any;
@@ -266,41 +283,43 @@ serve(async (req: Request) => {
             );
         }
 
-        // Try all three sources in order
+        // Try source 1: Mate.tools
         let result = await fetchFromMateTools(url);
 
+        // Try source 2: OpenUnfurl
         if (!result) {
-            console.log("[extract-metadata] Mate.tools failed, trying OpenUnfurl...");
+            console.log("[extract-metadata] Falling back to OpenUnfurl...");
             result = await fetchFromOpenUnfurl(url);
         }
 
+        // Try source 3: Direct HTML
         if (!result) {
-            console.log("[extract-metadata] OpenUnfurl failed, trying direct HTML fetch...");
-            result = await fetchFromDirectUrl(url);
+            console.log("[extract-metadata] Falling back to direct HTML fetch...");
+            result = await fetchFromDirectHtml(url);
         }
 
-        // If all three failed, return platform guess from URL at minimum
+        // All three failed — return at least the platform guess
         if (!result) {
-            console.log("[extract-metadata] All sources failed, returning URL-based guess");
+            console.log("[extract-metadata] All sources failed, returning platform guess");
             return new Response(
                 JSON.stringify({
                     title: "",
                     platform: extractPlatformFromUrl(url),
                     description: "",
                     source: "url_guess",
-                    warning: "Could not fetch metadata. Please enter details manually.",
+                    warning: "Could not fetch metadata from this URL. Please enter the course details manually.",
                 }),
                 { status: 200, headers: CORS_HEADERS }
             );
         }
 
-        console.log("[extract-metadata] Success:", result);
+        console.log("[extract-metadata] Success:", result.source);
         return new Response(JSON.stringify(result), {
             status: 200,
             headers: CORS_HEADERS,
         });
     } catch (err) {
-        console.error("[extract-metadata] Unhandled error:", err);
+        console.error("[extract-metadata] Unhandled error:", String(err));
         return new Response(
             JSON.stringify({
                 error: true,
