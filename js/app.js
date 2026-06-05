@@ -1,524 +1,218 @@
-/* ==========================================================================
-   Courseundo — Public Interface Logic (app.js) — FIXED v2
-   All DOM IDs are verified against index.html
-   ========================================================================== */
-
 (function () {
     'use strict';
 
-    // ================================================================
-    // CONFIGURATION — UPDATE THESE WITH YOUR ACTUAL VALUES
-    // ================================================================
-    const SUPABASE_URL = 'https://kvxfxpqbnmplcuadjmpc.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2eGZ4cHFibm1wbGN1YWRqbXBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDk2NjUsImV4cCI6MjA5NjIyNTY2NX0.GQ5glAUeNb_6wMS9OvGBu25WPFa1yDs_hquGfYLXS-c';
+    // ===== CONFIG =====
+    var SUPABASE_URL = 'https://kvxfxpqbnmplcuadjmpc.supabase.co'.replace(/\/+$/, '');
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2eGZ4cHFibm1wbGN1YWRqbXBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDk2NjUsImV4cCI6MjA5NjIyNTY2NX0.GQ5glAUeNb_6wMS9OvGBu25WPFa1yDs_hquGfYLXS-c';
+    var FN = SUPABASE_URL + '/functions/v1';
+    var REST = SUPABASE_URL + '/rest/v1';
+    var PER_PAGE = 20;
 
-    const FUNCTIONS_BASE = SUPABASE_URL + '/functions/v1';
-    const REST_BASE = SUPABASE_URL + '/rest/v1';
-    const PER_PAGE = 20;
-
-    // ================================================================
-    // STATE
-    // ================================================================
-    var state = {
-        courses: [],
-        suggestions: [],
-        totalCount: 0,
-        currentPage: 1,
-        activeTab: 'courses',
-        searchQuery: '',
-        searchType: 'keyword',
-        filters: {
-            platform: '',
-            category: '',
-            certification: '',
-            'job-available': '',
-            difficulty: '',
-            cost: ''
-        },
-        sortBy: 'relevance',
-        loading: false,
-        sessionId: ''
+    // ===== STATE =====
+    var S = {
+        courses: [], suggestions: [], total: 0, page: 1, tab: 'courses',
+        query: '', searchType: 'keyword',
+        filters: { platform: '', category: '', 'job-available': '', difficulty: '', cost: '', certification: '' },
+        sort: localStorage.getItem('cu_sort') || 'relevance',
+        sid: ''
     };
 
-    // ================================================================
-    // DOM CACHE
-    // ================================================================
-    var dom = {};
+    // ===== DOM =====
+    var $ = function (id) { return document.getElementById(id); };
+    var $$ = function (sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); };
+    var D = {};
 
-    function cacheDom() {
-        dom.searchInput = document.getElementById('search-input');
-        dom.searchBtn = document.getElementById('search-btn');
-        dom.searchMode = document.getElementById('search-mode');
-        dom.clearFilters = document.getElementById('clear-filters');
-        dom.resultsCount = document.getElementById('results-count');
-        dom.sortSelect = document.getElementById('sort-select');
-        dom.coursesGrid = document.getElementById('courses-grid');
-        dom.suggestionsList = document.getElementById('suggestions-list');
-        dom.suggestForm = document.getElementById('suggest-form');
-        dom.pagination = document.getElementById('pagination');
-        dom.toastContainer = document.getElementById('toast-container');
-        dom.ratingOverlay = document.getElementById('rating-overlay');
-        dom.ratingStars = document.getElementById('rating-stars');
-        dom.ratingFeedback = document.getElementById('rating-feedback');
-        dom.ratingCourseTitle = document.getElementById('rating-course-title');
-        dom.headerCourseCount = document.getElementById('header-course-count');
-
-        // Filter selects — IDs match HTML exactly
-        dom.filters = {
-            'platform': document.getElementById('filter-platform'),
-            'category': document.getElementById('filter-category'),
-            'certification': document.getElementById('filter-certification'),
-            'job-available': document.getElementById('filter-job-available'),
-            'difficulty': document.getElementById('filter-difficulty'),
-            'cost': document.getElementById('filter-cost')
-        };
-
-        // Tab buttons — querySelectorAll never returns null
-        dom.tabBtns = document.querySelectorAll('.tab-btn');
-        dom.tabPanels = document.querySelectorAll('.tab-panel');
-
-        // Suggestion form fields
-        dom.sugTitle = document.getElementById('sug-title');
-        dom.sugLink = document.getElementById('sug-link');
-        dom.sugPlatform = document.getElementById('sug-platform');
-        dom.sugName = document.getElementById('sug-name');
-        dom.sugEmail = document.getElementById('sug-email');
-        dom.sugNotes = document.getElementById('sug-notes');
-        dom.sugHoneypot = document.getElementById('sug-website');
-        dom.duplicateWarning = document.getElementById('duplicate-warning');
-
-        // Debug: log any missing elements
-        var required = {
-            searchInput: dom.searchInput,
-            searchBtn: dom.searchBtn,
-            coursesGrid: dom.coursesGrid,
-            suggestForm: dom.suggestForm,
-            sortSelect: dom.sortSelect,
-            pagination: dom.pagination,
-            ratingOverlay: dom.ratingOverlay,
-            toastContainer: dom.toastContainer,
-            suggestionsList: dom.suggestionsList
-        };
-        for (var key in required) {
-            if (!required[key]) {
-                console.error('[app.js] Missing DOM element: ' + key);
-            }
-        }
-        for (var fKey in dom.filters) {
-            if (!dom.filters[fKey]) {
-                console.error('[app.js] Missing filter element: filter-' + fKey);
-            }
-        }
+    function cache() {
+        D.searchInput = ('search-input'); D.searchBtn = $('search-btn'); D.searchMode = $('search-mode');
+        D.clearFilters = $('clear-filters'); D.resultsCount = $('results-count');
+        D.sortSelect = $('sort-select'); D.grid = $('courses-grid');
+        D.sugList = $('suggestions-list'); D.sugForm = $('suggest-form');
+        D.pagination = $('pagination'); D.toasts = $('toast-container');
+        D.rateOverlay = $('rating-overlay'); D.rateStars = $('rating-stars');
+        D.rateFeedback = $('rating-feedback'); D.rateTitle = $('rating-course-title');
+        D.courseCount = $('header-course-count');
+        D.sugTitle = $('sug-title'); D.sugLink = $('sug-link'); D.sugPlatform = $('sug-platform');
+        D.sugName = $('sug-name'); D.sugEmail = $('sug-email'); D.sugNotes = $('sug-notes');
+        D.hp = $('sug-website'); D.dupWarn = $('duplicate-warning');
+        D.tabBtns = $$$$('.tab-btn'); D.tabPanels = $$('.tab-panel');
+        D.filt = {};
+        ['platform', 'category', 'job-available', 'difficulty', 'cost', 'certification'].forEach(function (k) {
+            D.filt[k] = ('filter-' + k);
+        });
     }
 
-    // ================================================================
-    // INIT
-    // ================================================================
+    // ===== INIT =====
     document.addEventListener('DOMContentLoaded', function () {
-        cacheDom();
-        initSession();
-        bindEvents();
+        cache();
+        var sid = sessionStorage.getItem('cu_sid');
+        if (!sid) { sid = 's_' + Math.random().toString(36).substr(2, 9); sessionStorage.setItem('cu_sid', sid); }
+        S.sid = sid;
+        if (D.sortSelect) D.sortSelect.value = S.sort;
+        bind();
         loadCourses();
         loadStats();
+        log('page_visit', { page: 'home' });
     });
 
-    function initSession() {
-        var sid = sessionStorage.getItem('courseundo_session');
-        if (!sid) {
-            sid = 'sess_' + Math.random().toString(36).substring(2, 11);
-            sessionStorage.setItem('courseundo_session', sid);
-        }
-        state.sessionId = sid;
+    // ===== EVENTS =====
+    function bind() {
+        on(D.searchInput, 'keydown', function (e) { if (e.key === 'Enter') search(); });
+        on(D.searchBtn, 'click', search);
+        on(D.clearFilters, 'click', clearFilters);
+        on(D.sortSelect, 'change', function () { S.sort = D.sortSelect.value; localStorage.setItem('cu_sort', S.sort); S.page = 1; loadCourses(); log('sort_used', { sort: S.sort }); });
 
-        var saved = localStorage.getItem('courseundo_sort');
-        if (saved) {
-            state.sortBy = saved;
-            if (dom.sortSelect) dom.sortSelect.value = saved;
-        }
-
-        logActivity('page_visit', { page: 'home', referrer: document.referrer });
-    }
-
-    // ================================================================
-    // EVENT BINDING — with null checks on every element
-    // ================================================================
-    function bindEvents() {
-        // Search
-        if (dom.searchInput) {
-            dom.searchInput.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') performSearch();
-            });
-        }
-        if (dom.searchBtn) {
-            dom.searchBtn.addEventListener('click', performSearch);
-        }
-
-        // Filters
-        var filterKeys = Object.keys(dom.filters);
-        for (var i = 0; i < filterKeys.length; i++) {
-            (function (key) {
-                var el = dom.filters[key];
-                if (!el) return;
-                el.addEventListener('change', function () {
-                    state.filters[key] = el.value;
-                    if (el.value) {
-                        el.classList.add('has-value');
-                    } else {
-                        el.classList.remove('has-value');
-                    }
-                    state.currentPage = 1;
-                    loadCourses();
-                    if (el.value) {
-                        logActivity('filter_used', { filter: key, value: el.value });
-                    }
-                });
-            })(filterKeys[i]);
-        }
-
-        // Sort
-        if (dom.sortSelect) {
-            dom.sortSelect.addEventListener('change', function () {
-                state.sortBy = dom.sortSelect.value;
-                localStorage.setItem('courseundo_sort', state.sortBy);
-                state.currentPage = 1;
+        Object.keys(D.filt).forEach(function (k) {
+            on(D.filt[k], 'change', function () {
+                S.filters[k] = D.filt[k].value;
+                D.filt[k].classList.toggle('has-value', !!D.filt[k].value);
+                S.page = 1;
                 loadCourses();
-                logActivity('sort_used', { sort: state.sortBy });
+                if (D.filt[k].value) log('filter_used', { filter: k, value: D.filt[k].value });
             });
-        }
+        });
 
-        // Clear filters
-        if (dom.clearFilters) {
-            dom.clearFilters.addEventListener('click', clearAllFilters);
-        }
-
-        // Tabs
-        if (dom.tabBtns && dom.tabBtns.length) {
-            dom.tabBtns.forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    switchTab(btn.getAttribute('data-tab'));
-                });
-            });
-        }
-
-        // Suggestion form
-        if (dom.suggestForm) {
-            dom.suggestForm.addEventListener('submit', handleSuggest);
-        }
-        if (dom.sugLink) {
-            dom.sugLink.addEventListener('blur', checkDuplicate);
-        }
-
-        // Rating overlay close on backdrop click
-        if (dom.ratingOverlay) {
-            dom.ratingOverlay.addEventListener('click', function (e) {
-                if (e.target === dom.ratingOverlay) closeRatingPicker();
-            });
-        }
-
-        // Rating stars
-        if (dom.ratingStars) {
-            dom.ratingStars.addEventListener('mouseover', handleRatingHover);
-            dom.ratingStars.addEventListener('mouseout', handleRatingHoverOut);
-            dom.ratingStars.addEventListener('click', handleRatingClick);
-        }
+        D.tabBtns.forEach(function (b) { on(b, 'click', function () { switchTab(b.getAttribute('data-tab')); }); });
+        on(D.sugForm, 'submit', submitSuggestion);
+        on(D.sugLink, 'blur', checkDup);
+        on(D.rateOverlay, 'click', function (e) { if (e.target === D.rateOverlay) closeRate(); });
+        on(D.rateStars, 'mouseover', rateHover);
+        on(D.rateStars, 'mouseout', rateHoverOut);
+        on(D.rateStars, 'click', rateClick);
     }
 
-    // ================================================================
-    // API HELPERS
-    // ================================================================
-    function apiGet(endpoint, params) {
-        params = params || {};
-        var url = REST_BASE + '/' + endpoint;
+    function on(el, ev, fn) { if (el) el.addEventListener(ev, fn); }
+
+    // ===== API =====
+    function get(ep, params) {
+        var url = REST + '/' + ep;
         var first = true;
-        for (var key in params) {
-            if (params[key] === '' || params[key] === undefined || params[key] === null) continue;
-            url += (first ? '?' : '&') + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+        for (var k in params) {
+            if (params[k] === '' || params[k] == null) continue;
+            url += (first ? '?' : '&') + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
             first = false;
         }
-
-        return fetch(url, {
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-            }
-        })
-            .then(function (resp) {
-                var countHeader = resp.headers.get('Content-Range');
-                return resp.json().then(function (data) {
-                    if (!resp.ok) throw new Error(data.message || 'API error ' + resp.status);
-                    var total = Array.isArray(data) ? data.length : 0;
-                    if (countHeader) {
-                        var parts = countHeader.split('/');
-                        if (parts[1] && parts[1] !== '*') total = parseInt(parts[1], 10);
-                    }
-                    return { data: data, total: total };
+        return fetch(url, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY } })
+            .then(function (r) {
+                var cr = r.headers.get('Content-Range');
+                return r.json().then(function (d) {
+                    if (!r.ok) throw new Error(d.message || 'Error ' + r.status);
+                    var t = Array.isArray(d) ? d.length : 0;
+                    if (cr) { var p = cr.split('/'); if (p[1] && p[1] !== '*') t = parseInt(p[1], 10); }
+                    return { data: d, total: t };
                 });
             });
     }
 
-    function apiPost(endpoint, body, isFunction) {
-        var url = isFunction ? (FUNCTIONS_BASE + '/' + endpoint) : (REST_BASE + '/' + endpoint);
-        var headers = {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-            'Content-Type': 'application/json'
-        };
-        if (!isFunction) headers['Prefer'] = 'return=representation';
-
-        return fetch(url, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(body)
-        })
-            .then(function (resp) {
-                return resp.json().then(function (data) {
-                    if (!resp.ok) throw new Error(data.message || 'API error ' + resp.status);
-                    return data;
-                });
-            });
+    function post(ep, body, isFn) {
+        var url = isFn ? FN + '/' + ep : REST + '/' + ep;
+        var h = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+        if (!isFn) h['Prefer'] = 'return=representation';
+        return fetch(url, { method: 'POST', headers: h, body: JSON.stringify(body) })
+            .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.message || 'Error ' + r.status); return d; }); });
     }
 
-    // ================================================================
-    // LOAD COURSES
-    // ================================================================
+    // ===== COURSES =====
     function loadCourses() {
-        state.loading = true;
-        showGridLoading(true);
+        showLoading();
+        var q = S.query.trim();
+        var p;
+        if (q.length > 0 && S.searchType === 'semantic') p = loadSemantic(q);
+        else if (q.length > 0) p = loadKeyword(q);
+        else p = loadBrowse();
 
-        var query = state.searchQuery.trim();
-
-        var promise;
-        if (query.length > 0 && state.searchType === 'semantic') {
-            promise = loadCoursesSemantic(query);
-        } else if (query.length > 0) {
-            promise = loadCoursesKeyword(query);
-        } else {
-            promise = loadCoursesBrowse();
-        }
-
-        promise
-            .then(function (result) {
-                state.courses = result.results;
-                state.totalCount = result.total;
-                renderCourses();
-                renderPagination();
-                updateResultsCount();
-
-                if (query) {
-                    logActivity('search', {
-                        query: query,
-                        results_count: result.total,
-                        search_type: state.searchType
-                    });
-                }
-            })
-            .catch(function (err) {
-                console.error('[app.js] Error loading courses:', err);
-                if (dom.coursesGrid) {
-                    dom.coursesGrid.innerHTML =
-                        '<div class="empty-state"><div class="empty-state-icon">!</div>' +
-                        '<h3>Something went wrong</h3><p>' + escapeHtml(err.message) + '</p></div>';
-                }
-            })
-            .finally(function () {
-                state.loading = false;
-                showGridLoading(false);
-            });
-    }
-
-    function loadCoursesBrowse() {
-        var params = {
-            'status': 'eq.active',
-            'limit': PER_PAGE,
-            'offset': (state.currentPage - 1) * PER_PAGE
-        };
-        addFilterParams(params);
-        addSortParam(params);
-
-        return apiGet('courses', params).then(function (resp) {
-            return { results: resp.data, total: resp.total };
+        p.then(function (res) {
+            S.courses = res.results; S.total = res.total;
+            renderCourses(); renderPages(); updateCount();
+            if (q) log('search', { query: q, count: res.total, type: S.searchType });
+        }).catch(function (err) {
+            if (D.grid) D.grid.innerHTML = '<div class="empty-state"><h3>Error</h3><p>' + esc(err.message) + '</p></div>';
         });
     }
 
-    function loadCoursesKeyword(query) {
-        var orFilter = '(title.ilike.*' + query + '*,platform.ilike.*' + query + '*,institution.ilike.*' + query + '*,instructor.ilike.*' + query + '*)';
-        var params = {
-            'status': 'eq.active',
-            'or': orFilter,
-            'limit': PER_PAGE,
-            'offset': (state.currentPage - 1) * PER_PAGE
-        };
-        addFilterParams(params);
-        addSortParam(params);
-
-        return apiGet('courses', params).then(function (resp) {
-            return { results: resp.data, total: resp.total };
-        });
+    function loadBrowse() {
+        var pr = { status: 'eq.active', limit: PER_PAGE, offset: (S.page - 1) * PER_PAGE };
+        addFilters(pr); addSort(pr);
+        return get('courses', pr).then(function (r) { return { results: r.data, total: r.total }; });
     }
 
-    function loadCoursesSemantic(query) {
-        return apiPost('semantic-search', { query: query, limit: 100 }, true)
-            .then(function (data) {
-                if (data.fallback) {
-                    state.searchType = 'keyword';
-                    updateSearchMode();
-                    return loadCoursesKeyword(query);
-                }
-                var results = data.results || [];
-                results = applyClientFilters(results);
-                var total = results.length;
-                results = applyClientSort(results);
-                results = paginateArray(results, state.currentPage, PER_PAGE);
-                return { results: results, total: total };
-            })
-            .catch(function () {
-                state.searchType = 'keyword';
-                updateSearchMode();
-                return loadCoursesKeyword(query);
-            });
+    function loadKeyword(q) {
+        var pr = { status: 'eq.active', or: '(title.ilike.*' + q + '*,platform.ilike.*' + q + '*,institution.ilike.*' + q + '*,instructor.ilike.*' + q + '*)', limit: PER_PAGE, offset: (S.page - 1) * PER_PAGE };
+        addFilters(pr); addSort(pr);
+        return get('courses', pr).then(function (r) { return { results: r.data, total: r.total }; });
     }
 
-    function addFilterParams(params) {
-        var keys = Object.keys(state.filters);
-        for (var i = 0; i < keys.length; i++) {
-            var key = keys[i];
-            var val = state.filters[key];
-            if (val) params[key] = 'eq.' + val;
-        }
+    function loadSemantic(q) {
+        return post('semantic-search', { query: q, limit: 100 }, true).then(function (d) {
+            if (d.fallback) { S.searchType = 'keyword'; updateMode(); return loadKeyword(q); }
+            var res = clientFilter(d.results || []);
+            res = clientSort(res);
+            var tot = res.length;
+            res = res.slice((S.page - 1) * PER_PAGE, S.page * PER_PAGE);
+            return { results: res, total: tot };
+        }).catch(function () { S.searchType = 'keyword'; updateMode(); return loadKeyword(q); });
     }
 
-    function addSortParam(params) {
-        var map = {
-            'relevance': 'rating_avg.desc',
-            'rating-high': 'rating_avg.desc',
-            'rating-low': 'rating_avg.asc',
-            'newest': 'created_at.desc',
-            'oldest': 'created_at.asc',
-            'alpha-az': 'title.asc',
-            'alpha-za': 'title.desc',
-            'cost-free': 'cost.asc'
-        };
-        params['order'] = map[state.sortBy] || 'rating_avg.desc';
+    function addFilters(pr) {
+        for (var k in S.filters) { if (S.filters[k]) pr[k] = 'eq.' + S.filters[k]; }
     }
-
-    function applyClientFilters(results) {
-        return results.filter(function (c) {
-            var keys = Object.keys(state.filters);
-            for (var i = 0; i < keys.length; i++) {
-                var key = keys[i];
-                var val = state.filters[key];
-                if (!val) continue;
-                var courseVal = c[key] || '';
-                if (courseVal.toLowerCase() !== val.toLowerCase()) return false;
-            }
+    function addSort(pr) {
+        var m = { relevance: 'rating_avg.desc', 'rating-high': 'rating_avg.desc', 'rating-low': 'rating_avg.asc', newest: 'created_at.desc', oldest: 'created_at.asc', 'alpha-az': 'title.asc', 'alpha-za': 'title.desc', 'cost-free': 'cost.asc' };
+        pr.order = m[S.sort] || 'rating_avg.desc';
+    }
+    function clientFilter(arr) {
+        return arr.filter(function (c) {
+            for (var k in S.filters) { if (S.filters[k] && (c[k] || '').toLowerCase() !== S.filters[k].toLowerCase()) return false; }
             return true;
         });
     }
-
-    function applyClientSort(results) {
-        var sorted = results.slice();
-        switch (state.sortBy) {
-            case 'rating-high': sorted.sort(function (a, b) { return (b.rating_avg || 0) - (a.rating_avg || 0); }); break;
-            case 'rating-low': sorted.sort(function (a, b) { return (a.rating_avg || 0) - (b.rating_avg || 0); }); break;
-            case 'newest': sorted.sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); }); break;
-            case 'oldest': sorted.sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); }); break;
-            case 'alpha-az': sorted.sort(function (a, b) { return a.title.localeCompare(b.title); }); break;
-            case 'alpha-za': sorted.sort(function (a, b) { return b.title.localeCompare(a.title); }); break;
-            case 'cost-free': sorted.sort(function (a, b) { return (a.cost === 'Free' ? 0 : 1) - (b.cost === 'Free' ? 0 : 1); }); break;
-            default: sorted.sort(function (a, b) { return (b.rating_avg || 0) - (a.rating_avg || 0); }); break;
+    function clientSort(arr) {
+        var a = arr.slice();
+        switch (S.sort) {
+            case 'rating-high': a.sort(function (x, y) { return (y.rating_avg || 0) - (x.rating_avg || 0); }); break;
+            case 'rating-low': a.sort(function (x, y) { return (x.rating_avg || 0) - (y.rating_avg || 0); }); break;
+            case 'newest': a.sort(function (x, y) { return new Date(y.created_at) - new Date(x.created_at); }); break;
+            case 'oldest': a.sort(function (x, y) { return new Date(x.created_at) - new Date(y.created_at); }); break;
+            case 'alpha-az': a.sort(function (x, y) { return x.title.localeCompare(y.title); }); break;
+            case 'alpha-za': a.sort(function (x, y) { return y.title.localeCompare(x.title); }); break;
+            case 'cost-free': a.sort(function (x, y) { return (x.cost === 'Free' ? 0 : 1) - (y.cost === 'Free' ? 0 : 1); }); break;
+            default: a.sort(function (x, y) { return (y.rating_avg || 0) - (x.rating_avg || 0); });
         }
-        return sorted;
+        return a;
     }
 
-    function paginateArray(arr, page, perPage) {
-        var start = (page - 1) * perPage;
-        return arr.slice(start, start + perPage);
-    }
-
-    // ================================================================
-    // RENDER COURSES
-    // ================================================================
+    // ===== RENDER COURSES =====
     function renderCourses() {
-        if (!dom.coursesGrid) return;
-
-        if (!state.courses || state.courses.length === 0) {
-            dom.coursesGrid.innerHTML =
-                '<div class="empty-state">' +
-                '<div class="empty-state-icon">&#9744;</div>' +
-                '<h3>No courses found</h3>' +
-                '<p>Try adjusting your search or filters.</p></div>';
-            return;
-        }
-
-        var html = '';
-        for (var idx = 0; idx < state.courses.length; idx++) {
-            var c = state.courses[idx];
-            var platformClass = getPlatformClass(c.platform);
-            var badges = buildBadges(c);
-            var starsHtml = buildStarsHtml(c.rating_avg || 0);
-            var freshnessClass = getFreshnessClass(c.last_verified);
-            var freshnessText = getFreshnessText(c.last_verified);
-            var meta = buildMeta(c);
-            var delay = (idx * 0.05).toFixed(2);
-
-            html +=
-                '<article class="course-card" style="animation-delay:' + delay + 's" data-course-id="' + c.id + '">' +
+        if (!D.grid) return;
+        if (!S.courses.length) { D.grid.innerHTML = '<div class="empty-state"><h3>No courses found</h3><p>Try adjusting your search.</p></div>'; return; }
+        var h = '';
+        S.courses.forEach(function (c, i) {
+            var pCls = platCls(c.platform);
+            h += '<article class="course-card" style="animation-delay:' + (i * 0.04).toFixed(2) + 's" data-id="' + c.id + '">' +
                 '<div class="card-header">' +
-                '<h3 class="card-title">' +
-                '<a href="' + escapeAttr(c.link) + '" target="_blank" rel="noopener" data-course-id="' + c.id + '" data-course-title="' + escapeAttr(c.title) + '" data-course-platform="' + escapeAttr(c.platform || '') + '" class="course-link">' +
-                escapeHtml(c.title) +
-                '</a>' +
-                '</h3>' +
-                (c.platform ? '<span class="card-platform ' + platformClass + '">' + escapeHtml(c.platform) + '</span>' : '') +
+                '<h3 class="card-title"><a href="' + escA(c.link) + '" target="_blank" rel="noopener" data-cid="' + c.id + '" data-ct="' + escA(c.title) + '" data-cp="' + escA(c.platform || '') + '" class="clink">' + esc(c.title) + '</a></h3>' +
+                (c.platform ? '<span class="card-platform ' + pCls + '">' + esc(c.platform) + '</span>' : '') +
                 '</div>' +
-                (badges ? '<div class="card-badges">' + badges + '</div>' : '') +
-                (meta ? '<div class="card-meta">' + meta + '</div>' : '') +
+                badges(c) +
+                meta(c) +
                 '<div class="card-rating">' +
-                '<div class="stars clickable-stars" data-course-id="' + c.id + '" data-course-title="' + escapeAttr(c.title) + '" role="button" tabindex="0" aria-label="Rate this course">' +
-                starsHtml +
-                '</div>' +
-                '<span class="rating-text">' +
-                (c.rating_avg || 0).toFixed(1) +
-                ' <span class="count">(' + (c.rating_count || 0) + ')</span>' +
-                '</span>' +
-                (freshnessText ? '<span class="freshness ' + freshnessClass + '">' + freshnessText + '</span>' : '') +
+                '<div class="stars cstars" data-cid="' + c.id + '" data-ct="' + escA(c.title) + '" role="button" tabindex="0" aria-label="Rate">' + stars(c.rating_avg || 0) + '</div>' +
+                '<span class="rating-text">' + (c.rating_avg || 0).toFixed(1) + ' <span class="count">(' + (c.rating_count || 0) + ')</span></span>' +
+                freshness(c.last_verified) +
                 '</div>' +
                 '</article>';
-        }
-        dom.coursesGrid.innerHTML = html;
+        });
+        D.grid.innerHTML = h;
 
-        // Bind click tracking on course links
-        var links = dom.coursesGrid.querySelectorAll('.course-link');
-        for (var li = 0; li < links.length; li++) {
-            links[li].addEventListener('click', function () {
-                logActivity('course_click', {
-                    course_id: this.getAttribute('data-course-id'),
-                    title: this.getAttribute('data-course-title'),
-                    platform: this.getAttribute('data-course-platform')
-                });
-            });
-        }
-
-        // Bind star clicks
-        var starDivs = dom.coursesGrid.querySelectorAll('.clickable-stars');
-        for (var si = 0; si < starDivs.length; si++) {
-            (function (el) {
-                el.addEventListener('click', function () {
-                    openRatingPicker(el.getAttribute('data-course-id'), el.getAttribute('data-course-title'));
-                });
-                el.addEventListener('keydown', function (e) {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        openRatingPicker(el.getAttribute('data-course-id'), el.getAttribute('data-course-title'));
-                    }
-                });
-            })(starDivs[si]);
-        }
+        $$$$('.clink').forEach(function (a) { on(a, 'click', function () { log('course_click', { id: a.getAttribute('data-cid'), title: a.getAttribute('data-ct'), platform: a.getAttribute('data-cp') }); }); });
+        $$('.cstars').forEach(function (el) {
+            on(el, 'click', function () { openRate(el.getAttribute('data-cid'), el.getAttribute('data-ct')); });
+            on(el, 'keydown', function (e) { if (e.key === 'Enter') openRate(el.getAttribute('data-cid'), el.getAttribute('data-ct')); });
+        });
     }
 
-    function getPlatformClass(platform) {
-        if (!platform) return 'platform-other';
-        var p = platform.toLowerCase();
+    function platCls(p) {
+        if (!p) return 'platform-other';
+        p = p.toLowerCase();
         if (p.indexOf('coursera') !== -1) return 'platform-coursera';
         if (p.indexOf('edx') !== -1) return 'platform-edx';
         if (p.indexOf('udemy') !== -1) return 'platform-udemy';
@@ -528,446 +222,192 @@
         if (p.indexOf('linkedin') !== -1) return 'platform-linkedin';
         return 'platform-other';
     }
-
-    function buildBadges(c) {
-        var badges = '';
-        if (c.category) badges += '<span class="badge badge-category">' + escapeHtml(c.category) + '</span>';
-        if (c.difficulty) badges += '<span class="badge badge-difficulty-' + c.difficulty.toLowerCase() + '">' + escapeHtml(c.difficulty) + '</span>';
-        if (c.cost) badges += '<span class="badge badge-cost-' + c.cost.toLowerCase() + '">' + escapeHtml(c.cost) + '</span>';
-        if (c.certification === 'Yes') badges += '<span class="badge badge-cert">Certificate</span>';
-        if (c.job_available === 'Yes') badges += '<span class="badge badge-job">Jobs</span>';
-        return badges;
+    function badges(c) {
+        var b = '';
+        if (c.category) b += '<span class="badge badge-category">' + esc(c.category) + '</span>';
+        if (c.difficulty) b += '<span class="badge badge-difficulty-' + c.difficulty.toLowerCase() + '">' + esc(c.difficulty) + '</span>';
+        if (c.cost) b += '<span class="badge badge-cost-' + c.cost.toLowerCase() + '">' + esc(c.cost) + '</span>';
+        if (c.certification === 'Yes') b += '<span class="badge badge-cert">Certificate</span>';
+        if (c.job_available === 'Yes') b += '<span class="badge badge-job">Jobs</span>';
+        return b ? '<div class="card-badges">' + b + '</div>' : '';
+    }
+    function meta(c) {
+        var m = '';
+        if (c.institution) m += '<span class="card-meta-item">' + esc(c.institution) + '</span>';
+        if (c.instructor) m += '<span class="card-meta-item">' + esc(c.instructor) + '</span>';
+        if (c.duration) m += '<span class="card-meta-item">' + esc(c.duration) + '</span>';
+        return m ? '<div class="card-meta">' + m + '</div>' : '';
+    }
+    function stars(r) {
+        var h = '', n = Math.round(r);
+        for (var i = 1; i <= 5; i++) h += '<span class="star' + (i > n ? ' empty' : '') + '">&#9733;</span>';
+        return h;
+    }
+    function freshness(d) {
+        if (!d) return '<span class="freshness freshness-red">Not verified</span>';
+        var days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+        if (days < 7) return '<span class="freshness freshness-green">Checked ' + days + 'd ago</span>';
+        if (days < 90) return '<span class="freshness freshness-yellow">Checked ' + days + 'd ago</span>';
+        return '<span class="freshness freshness-red">Checked ' + days + 'd ago</span>';
     }
 
-    function buildMeta(c) {
-        var items = '';
-        if (c.institution) items += '<span class="card-meta-item">' + escapeHtml(c.institution) + '</span>';
-        if (c.instructor) items += '<span class="card-meta-item">' + escapeHtml(c.instructor) + '</span>';
-        if (c.duration) items += '<span class="card-meta-item">' + escapeHtml(c.duration) + '</span>';
-        if (c.language) items += '<span class="card-meta-item">' + escapeHtml(c.language) + '</span>';
-        return items;
-    }
-
-    function buildStarsHtml(rating) {
-        var html = '';
-        var rounded = Math.round(rating);
-        for (var i = 1; i <= 5; i++) {
-            html += '<span class="star ' + (i <= rounded ? '' : 'empty') + '">&#9733;</span>';
+    // ===== PAGINATION =====
+    function renderPages() {
+        if (!D.pagination) return;
+        var tp = Math.ceil(S.total / PER_PAGE);
+        if (tp <= 1) { D.pagination.innerHTML = ''; return; }
+        var h = '<button class="page-btn" data-p="' + (S.page - 1) + '"' + (S.page <= 1 ? ' disabled' : '') + '>&laquo;</button>';
+        for (var i = 1; i <= tp; i++) {
+            if (tp > 7 && i > 2 && i < tp - 1 && Math.abs(i - S.page) > 1) { if (i === 3 || i === tp - 2) h += '<span class="page-btn" style="border:none;cursor:default">...</span>'; continue; }
+            h += '<button class="page-btn' + (i === S.page ? ' active' : '') + '" data-p="' + i + '">' + i + '</button>';
         }
-        return html;
+        h += '<button class="page-btn" data-p="' + (S.page + 1) + '"' + (S.page >= tp ? ' disabled' : '') + '>&raquo;</button>';
+        D.pagination.innerHTML = h;
+        $$('.page-btn[data-p]').forEach(function (b) {
+            on(b, 'click', function () {
+                var p = parseInt(b.getAttribute('data-p'), 10);
+                if (p >= 1 && p <= tp) { S.page = p; loadCourses(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+            });
+        });
     }
+    function updateCount() { if (D.resultsCount) D.resultsCount.innerHTML = '<strong>' + S.total + '</strong> ' + (S.query ? 'results' : 'courses'); }
 
-    function getFreshnessClass(dateStr) {
-        if (!dateStr) return 'freshness-red';
-        var days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-        if (days < 7) return 'freshness-green';
-        if (days < 90) return 'freshness-yellow';
-        return 'freshness-red';
-    }
-
-    function getFreshnessText(dateStr) {
-        if (!dateStr) return 'Not verified';
-        var days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-        if (days === 0) return 'Checked today';
-        if (days === 1) return 'Checked yesterday';
-        return 'Checked ' + days + 'd ago';
-    }
-
-    // ================================================================
-    // PAGINATION
-    // ================================================================
-    function renderPagination() {
-        if (!dom.pagination) return;
-        var totalPages = Math.ceil(state.totalCount / PER_PAGE);
-        if (totalPages <= 1) { dom.pagination.innerHTML = ''; return; }
-
-        var current = state.currentPage;
-        var html = '';
-        html += '<button class="page-btn" data-page="' + (current - 1) + '"' + (current <= 1 ? ' disabled' : '') + '>&laquo;</button>';
-
-        var range = getPageRange(current, totalPages, 5);
-        for (var i = 0; i < range.length; i++) {
-            if (range[i] === '...') {
-                html += '<span class="page-btn" style="cursor:default;border:none">...</span>';
-            } else {
-                html += '<button class="page-btn' + (range[i] === current ? ' active' : '') + '" data-page="' + range[i] + '">' + range[i] + '</button>';
-            }
-        }
-
-        html += '<button class="page-btn" data-page="' + (current + 1) + '"' + (current >= totalPages ? ' disabled' : '') + '>&raquo;</button>';
-        dom.pagination.innerHTML = html;
-
-        var btns = dom.pagination.querySelectorAll('.page-btn[data-page]');
-        for (var j = 0; j < btns.length; j++) {
-            (function (btn) {
-                btn.addEventListener('click', function () {
-                    var page = parseInt(btn.getAttribute('data-page'), 10);
-                    if (page >= 1 && page <= totalPages) {
-                        state.currentPage = page;
-                        loadCourses();
-                        logActivity('page_change', { page: page, total_pages: totalPages });
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }
-                });
-            })(btns[j]);
-        }
-    }
-
-    function getPageRange(current, total, maxVisible) {
-        if (total <= maxVisible) {
-            var arr = [];
-            for (var i = 1; i <= total; i++) arr.push(i);
-            return arr;
-        }
-        var range = [];
-        var left = Math.max(2, current - 1);
-        var right = Math.min(total - 1, current + 1);
-        range.push(1);
-        if (left > 2) range.push('...');
-        for (var j = left; j <= right; j++) range.push(j);
-        if (right < total - 1) range.push('...');
-        range.push(total);
-        return range;
-    }
-
-    function updateResultsCount() {
-        if (!dom.resultsCount) return;
-        var label = state.searchQuery ? 'results' : 'courses';
-        dom.resultsCount.innerHTML = '<strong>' + state.totalCount + '</strong> ' + label;
-    }
-
-    // ================================================================
-    // SEARCH
-    // ================================================================
-    function performSearch() {
-        if (!dom.searchInput) return;
-        var query = dom.searchInput.value.trim();
-        state.searchQuery = query;
-        state.currentPage = 1;
-        state.searchType = query.length > 3 ? 'semantic' : 'keyword';
-        updateSearchMode();
+    // ===== SEARCH =====
+    function search() {
+        S.query = (D.searchInput ? D.searchInput.value : '').trim();
+        S.page = 1;
+        S.searchType = S.query.length > 3 ? 'semantic' : 'keyword';
+        updateMode();
         loadCourses();
     }
-
-    function updateSearchMode() {
-        if (!dom.searchMode) return;
-        if (state.searchType === 'semantic') {
-            dom.searchMode.innerHTML = '<span class="dot"></span> AI semantic search active';
-        } else {
-            dom.searchMode.innerHTML = '<span class="dot" style="background:var(--text-muted)"></span> Keyword search';
-        }
+    function updateMode() {
+        if (!D.searchMode) return;
+        D.searchMode.innerHTML = S.searchType === 'semantic'
+            ? '<span class="dot"></span> AI semantic search'
+            : '<span class="dot" style="background:var(--text-muted)"></span> Keyword search';
     }
 
-    // ================================================================
-    // FILTERS
-    // ================================================================
-    function clearAllFilters() {
-        var keys = Object.keys(state.filters);
-        for (var i = 0; i < keys.length; i++) {
-            state.filters[keys[i]] = '';
-            if (dom.filters[keys[i]]) {
-                dom.filters[keys[i]].value = '';
-                dom.filters[keys[i]].classList.remove('has-value');
-            }
-        }
-        state.currentPage = 1;
-        loadCourses();
+    // ===== FILTERS =====
+    function clearFilters() {
+        for (var k in S.filters) { S.filters[k] = ''; if (D.filt[k]) { D.filt[k].value = ''; D.filt[k].classList.remove('has-value'); } }
+        S.page = 1; loadCourses();
     }
 
-    // ================================================================
-    // TABS
-    // ================================================================
-    function switchTab(tabId) {
-        state.activeTab = tabId;
-
-        if (dom.tabBtns) {
-            dom.tabBtns.forEach(function (btn) {
-                if (btn.getAttribute('data-tab') === tabId) {
-                    btn.classList.add('active');
-                    btn.setAttribute('aria-selected', 'true');
-                } else {
-                    btn.classList.remove('active');
-                    btn.setAttribute('aria-selected', 'false');
-                }
-            });
-        }
-
-        if (dom.tabPanels) {
-            dom.tabPanels.forEach(function (panel) {
-                if (panel.id === 'panel-' + tabId) {
-                    panel.classList.add('active');
-                } else {
-                    panel.classList.remove('active');
-                }
-            });
-        }
-
-        if (tabId === 'suggestions') loadSuggestions();
+    // ===== TABS =====
+    function switchTab(id) {
+        S.tab = id;
+        D.tabBtns.forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === id); });
+        D.tabPanels.forEach(function (p) { p.classList.toggle('active', p.id === 'panel-' + id); });
+        if (id === 'suggestions') loadSuggestions();
     }
 
-    // ================================================================
-    // SUGGESTIONS
-    // ================================================================
+    // ===== SUGGESTIONS =====
     function loadSuggestions() {
-        apiGet('suggestions', {
-            'status': 'eq.pending',
-            'order': 'created_at.desc'
-        })
-            .then(function (resp) {
-                state.suggestions = resp.data;
-                renderSuggestions();
-            })
-            .catch(function (err) {
-                console.error('[app.js] Error loading suggestions:', err);
+        get('suggestions', { status: 'eq.pending', order: 'created_at.desc' }).then(function (r) {
+            S.suggestions = r.data;
+            if (!D.sugList) return;
+            if (!r.data.length) { D.sugList.innerHTML = '<div class="empty-state"><h3>No pending suggestions</h3></div>'; return; }
+            var h = '';
+            r.data.forEach(function (s, i) {
+                h += '<div class="suggestion-card" style="animation-delay:' + (i * 0.04) + 's">' +
+                    '<div class="flex-between"><h4 class="suggestion-title"><a href="' + escA(s.link) + '" target="_blank">' + esc(s.title) + '</a></h4><span class="badge badge-pending">Pending</span></div>' +
+                    '<div class="suggestion-meta">' + (s.platform ? '<span>' + esc(s.platform) + '</span>' : '') + (s.user_name ? '<span>By: ' + esc(s.user_name) + '</span>' : '') + '<span>' + fmtDate(s.created_at) + '</span></div>' +
+                    (s.notes ? '<p class="suggestion-notes">"' + esc(s.notes) + '"</p>' : '') + '</div>';
             });
+            D.sugList.innerHTML = h;
+        }).catch(function () { });
     }
 
-    function renderSuggestions() {
-        if (!dom.suggestionsList) return;
-
-        if (!state.suggestions || state.suggestions.length === 0) {
-            dom.suggestionsList.innerHTML =
-                '<div class="empty-state">' +
-                '<div class="empty-state-icon">&#9993;</div>' +
-                '<h3>No pending suggestions</h3>' +
-                '<p>Be the first to suggest a course!</p></div>';
-            return;
-        }
-
-        var html = '';
-        for (var i = 0; i < state.suggestions.length; i++) {
-            var s = state.suggestions[i];
-            html +=
-                '<div class="suggestion-card" style="animation-delay:' + (i * 0.05).toFixed(2) + 's">' +
-                '<div class="flex-between">' +
-                '<h4 class="suggestion-title"><a href="' + escapeAttr(s.link) + '" target="_blank" rel="noopener">' + escapeHtml(s.title) + '</a></h4>' +
-                '<span class="badge badge-pending">Pending Review</span>' +
-                '</div>' +
-                '<div class="suggestion-meta">' +
-                (s.platform ? '<span>Platform: ' + escapeHtml(s.platform) + '</span>' : '') +
-                (s.user_name ? '<span>By: ' + escapeHtml(s.user_name) + '</span>' : '') +
-                '<span>' + formatDate(s.created_at) + '</span>' +
-                '</div>' +
-                (s.notes ? '<p class="suggestion-notes">"' + escapeHtml(s.notes) + '"</p>' : '') +
-                '</div>';
-        }
-        dom.suggestionsList.innerHTML = html;
-    }
-
-    // ================================================================
-    // SUGGESTION FORM
-    // ================================================================
-    function handleSuggest(e) {
+    function submitSuggestion(e) {
         e.preventDefault();
-
-        // Honeypot
-        if (dom.sugHoneypot && dom.sugHoneypot.value) return;
-
-        var title = dom.sugTitle ? dom.sugTitle.value.trim() : '';
-        var link = dom.sugLink ? dom.sugLink.value.trim() : '';
-
-        if (!title || title.length < 5) {
-            showToast('Title must be at least 5 characters.', 'error');
-            return;
-        }
-        if (!link || !link.match(/^https?:\/\//)) {
-            showToast('Please enter a valid URL.', 'error');
-            return;
-        }
-
-        var body = {
-            title: title,
-            link: link,
-            platform: dom.sugPlatform ? dom.sugPlatform.value.trim() : '',
-            user_name: dom.sugName ? dom.sugName.value.trim() : '',
-            user_email: dom.sugEmail ? dom.sugEmail.value.trim() : '',
-            notes: dom.sugNotes ? dom.sugNotes.value.trim() : ''
-        };
-
-        // Remove empty optional fields
-        if (!body.platform) delete body.platform;
-        if (!body.user_name) delete body.user_name;
-        if (!body.user_email) delete body.user_email;
-        if (!body.notes) delete body.notes;
-
-        apiPost('suggestions', body, false)
-            .then(function () {
-                showToast('Suggestion submitted! The admin will review it.', 'success');
-                if (dom.suggestForm) dom.suggestForm.reset();
-                if (dom.duplicateWarning) dom.duplicateWarning.classList.remove('visible');
-                logActivity('suggestion', { title: title, link: link });
-                if (state.activeTab === 'suggestions') loadSuggestions();
-            })
-            .catch(function (err) {
-                showToast(err.message || 'Failed to submit suggestion.', 'error');
-            });
+        if (D.hp && D.hp.value) return;
+        var title = D.sugTitle ? D.sugTitle.value.trim() : '';
+        var link = D.sugLink ? D.sugLink.value.trim() : '';
+        if (!title || title.length < 5) { toast('Title must be 5+ characters.', 'error'); return; }
+        if (!link || !/^https?:\/\//.test(link)) { toast('Enter a valid URL.', 'error'); return; }
+        var body = { title: title, link: link };
+        var plat = D.sugPlatform ? D.sugPlatform.value.trim() : '';
+        var name = D.sugName ? D.sugName.value.trim() : '';
+        var email = D.sugEmail ? D.sugEmail.value.trim() : '';
+        var notes = D.sugNotes ? D.sugNotes.value.trim() : '';
+        if (plat) body.platform = plat;
+        if (name) body.user_name = name;
+        if (email) body.user_email = email;
+        if (notes) body.notes = notes;
+        post('suggestions', body).then(function () {
+            toast('Suggestion submitted!', 'success');
+            if (D.sugForm) D.sugForm.reset();
+            if (D.dupWarn) D.dupWarn.classList.remove('visible');
+            log('suggestion', { title: title, link: link });
+            if (S.tab === 'suggestions') loadSuggestions();
+        }).catch(function (err) { toast(err.message || 'Submit failed.', 'error'); });
     }
 
-    function checkDuplicate() {
-        var link = dom.sugLink ? dom.sugLink.value.trim() : '';
-        if (!link || !link.match(/^https?:\/\//)) return;
-
-        apiGet('courses', { 'link': 'eq.' + link, 'select': 'id,title', 'limit': 1 })
-            .then(function (resp) {
-                if (resp.data.length > 0 && dom.duplicateWarning) {
-                    dom.duplicateWarning.innerHTML = '&#9888; This course already exists: <strong>' + escapeHtml(resp.data[0].title) + '</strong>';
-                    dom.duplicateWarning.classList.add('visible');
-                } else if (dom.duplicateWarning) {
-                    dom.duplicateWarning.classList.remove('visible');
-                }
-            })
-            .catch(function () { /* silent */ });
+    function checkDup() {
+        var link = D.sugLink ? D.sugLink.value.trim() : '';
+        if (!link || !/^https?:\/\//.test(link)) return;
+        get('courses', { link: 'eq.' + link, select: 'id,title', limit: 1 }).then(function (r) {
+            if (r.data.length && D.dupWarn) { D.dupWarn.innerHTML = '&#9888; Already exists: <strong>' + esc(r.data[0].title) + '</strong>'; D.dupWarn.classList.add('visible'); }
+            else if (D.dupWarn) D.dupWarn.classList.remove('visible');
+        }).catch(function () { });
     }
 
-    // ================================================================
-    // RATINGS
-    // ================================================================
-    var pendingRating = { courseId: null, courseTitle: null };
-
-    function openRatingPicker(courseId, courseTitle) {
-        pendingRating = { courseId: courseId, courseTitle: courseTitle };
-        if (dom.ratingCourseTitle) dom.ratingCourseTitle.textContent = courseTitle;
-        if (dom.ratingFeedback) dom.ratingFeedback.textContent = '';
-        if (dom.ratingStars) {
-            var stars = dom.ratingStars.querySelectorAll('.star');
-            for (var i = 0; i < stars.length; i++) stars[i].classList.remove('active');
-        }
-        if (dom.ratingOverlay) dom.ratingOverlay.classList.add('active');
+    // ===== RATINGS =====
+    var pRate = { id: null, title: '' };
+    function openRate(id, title) {
+        pRate = { id: id, title: title };
+        if (D.rateTitle) D.rateTitle.textContent = title;
+        if (D.rateFeedback) D.rateFeedback.textContent = '';
+        $$('.rating-picker-stars .star').forEach(function (s) { s.classList.remove('active'); });
+        if (D.rateOverlay) D.rateOverlay.classList.add('active');
+    }
+    function closeRate() { if (D.rateOverlay) D.rateOverlay.classList.remove('active'); }
+    function rateHover(e) {
+        var s = e.target.closest('.star'); if (!s) return;
+        var v = parseInt(s.getAttribute('data-value'), 10);
+        $$('.rating-picker-stars .star').forEach(function (st) { st.classList.toggle('active', parseInt(st.getAttribute('data-value'), 10) <= v); });
+        if (D.rateFeedback) D.rateFeedback.textContent = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][v] || '';
+    }
+    function rateHoverOut() { $$('.rating-picker-stars .star').forEach(function (s) { s.classList.remove('active'); }); if (D.rateFeedback) D.rateFeedback.textContent = ''; }
+    function rateClick(e) {
+        var s = e.target.closest('.star'); if (!s || !pRate.id) return;
+        var v = parseInt(s.getAttribute('data-value'), 10);
+        post('ratings', { course_id: pRate.id, rating: v }).then(function () {
+            toast('Rated ' + v + ' stars!', 'success'); closeRate(); log('rating', { id: pRate.id, rating: v }); loadCourses();
+        }).catch(function (err) { toast(err.message || 'Rating failed.', 'error'); closeRate(); });
     }
 
-    function closeRatingPicker() {
-        if (dom.ratingOverlay) dom.ratingOverlay.classList.remove('active');
-    }
-
-    function handleRatingHover(e) {
-        var star = e.target.closest('.star');
-        if (!star || !dom.ratingStars) return;
-        var val = parseInt(star.getAttribute('data-value'), 10);
-        var stars = dom.ratingStars.querySelectorAll('.star');
-        for (var i = 0; i < stars.length; i++) {
-            if (parseInt(stars[i].getAttribute('data-value'), 10) <= val) {
-                stars[i].classList.add('active');
-            } else {
-                stars[i].classList.remove('active');
-            }
-        }
-        var labels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
-        if (dom.ratingFeedback) dom.ratingFeedback.textContent = labels[val] || '';
-    }
-
-    function handleRatingHoverOut() {
-        if (!dom.ratingStars) return;
-        var stars = dom.ratingStars.querySelectorAll('.star');
-        for (var i = 0; i < stars.length; i++) stars[i].classList.remove('active');
-        if (dom.ratingFeedback) dom.ratingFeedback.textContent = '';
-    }
-
-    function handleRatingClick(e) {
-        var star = e.target.closest('.star');
-        if (!star || !pendingRating.courseId) return;
-
-        var rating = parseInt(star.getAttribute('data-value'), 10);
-        if (rating < 1 || rating > 5) return;
-
-        apiPost('ratings', { course_id: pendingRating.courseId, rating: rating }, false)
-            .then(function () {
-                showToast('Rated "' + pendingRating.courseTitle + '" ' + rating + ' stars!', 'success');
-                closeRatingPicker();
-                logActivity('rating', { course_id: pendingRating.courseId, rating: rating });
-                loadCourses();
-            })
-            .catch(function (err) {
-                if (err.message && err.message.indexOf('already rated') !== -1) {
-                    showToast('You have already rated this course.', 'error');
-                } else {
-                    showToast('Failed to submit rating.', 'error');
-                }
-                closeRatingPicker();
-            });
-    }
-
-    // ================================================================
-    // STATS
-    // ================================================================
+    // ===== STATS =====
     function loadStats() {
-        apiGet('courses', { 'status': 'eq.active', 'select': 'id', 'limit': 1 })
-            .then(function (resp) {
-                if (dom.headerCourseCount) dom.headerCourseCount.textContent = resp.total || 0;
-            })
-            .catch(function () { });
+        get('courses', { status: 'eq.active', select: 'id', limit: 1 }).then(function (r) {
+            if (D.courseCount) D.courseCount.textContent = r.total || 0;
+        }).catch(function () { });
     }
 
-    // ================================================================
-    // ACTIVITY LOGGING
-    // ================================================================
-    function logActivity(action, details) {
+    // ===== LOGGING (NO sendBeacon — uses fetch with keepalive) =====
+    function log(action, details) {
         details = details || {};
         try {
-            var payload = JSON.stringify({
-                action: action,
-                details: details,
-                session_id: state.sessionId,
-                screen_size: window.innerWidth + 'x' + window.innerHeight,
-                referrer: document.referrer || null
-            });
-
-            if (navigator.sendBeacon) {
-                var blob = new Blob([payload], { type: 'application/json' });
-                navigator.sendBeacon(FUNCTIONS_BASE + '/log-activity', blob);
-            } else {
-                fetch(FUNCTIONS_BASE + '/log-activity', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-                    body: payload,
-                    keepalive: true
-                }).catch(function () { });
-            }
-        } catch (err) { /* silent */ }
+            fetch(FN + '/log-activity', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+                body: JSON.stringify({ action: action, details: details, session_id: S.sid, screen_size: innerWidth + 'x' + innerHeight, referrer: document.referrer || null }),
+                keepalive: true
+            }).catch(function () { });
+        } catch (e) { }
     }
 
-    // ================================================================
-    // UI HELPERS
-    // ================================================================
-    function showToast(message, type) {
-        type = type || 'info';
-        if (!dom.toastContainer) return;
-        var toast = document.createElement('div');
-        toast.className = 'toast toast-' + type;
-        toast.textContent = message;
-        dom.toastContainer.appendChild(toast);
-        setTimeout(function () { if (toast.parentNode) toast.remove(); }, 4000);
+    // ===== HELPERS =====
+    function toast(msg, type) {
+        if (!D.toasts) return;
+        var t = document.createElement('div');
+        t.className = 'toast toast-' + (type || 'info');
+        t.textContent = msg;
+        D.toasts.appendChild(t);
+        setTimeout(function () { if (t.parentNode) t.remove(); }, 4000);
     }
-
-    function showGridLoading(show) {
-        if (!dom.coursesGrid) return;
-        if (show) {
-            dom.coursesGrid.innerHTML =
-                '<div class="loading-spinner" style="grid-column:1/-1"><div class="spinner"></div><span class="loading-text">Loading courses...</span></div>';
-        }
-    }
-
-    // ================================================================
-    // UTILITIES
-    // ================================================================
-    function escapeHtml(str) {
-        if (!str) return '';
-        var div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    function escapeAttr(str) {
-        if (!str) return '';
-        return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-
-    function formatDate(dateStr) {
-        if (!dateStr) return '';
-        try {
-            return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-        } catch (e) {
-            return dateStr;
-        }
-    }
-
+    function showLoading() { if (D.grid) D.grid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><span class="loading-text">Loading...</span></div>'; }
+    function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function escA(s) { return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;'); }
+    function fmtDate(d) { if (!d) return ''; try { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { return d; } }
 })();
