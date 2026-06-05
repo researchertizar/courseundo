@@ -12,11 +12,13 @@ const SUPABASE_SERVICE_ROLE_KEY =
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 const CORS_HEADERS = {
-    "Access-Control-Allow-Origin": Deno.env.get("FRONTEND_URL") || "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey",
-    "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": Deno.env.get("FRONTEND_URL") || "*",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, Prefer, x-client-info",
+  "Access-Control-Max-Age": "86400",
+  "Content-Type": "application/json",
 };
+
 
 const EMBEDDING_MODEL = "embedding-001";
 const EMBEDDING_DIM = 768;

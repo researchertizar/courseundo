@@ -10,11 +10,13 @@ const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") || "";
 const FRONTEND_URL = Deno.env.get("FRONTEND_URL") || "";
 
 const CORS_HEADERS = {
-    "Access-Control-Allow-Origin": FRONTEND_URL || "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey",
-    "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": Deno.env.get("FRONTEND_URL") || "*",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, Prefer, x-client-info",
+  "Access-Control-Max-Age": "86400",
+  "Content-Type": "application/json",
 };
+
 
 type NotificationType =
     | "new_suggestion"

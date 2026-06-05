@@ -7,11 +7,13 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const CORS_HEADERS = {
-    "Access-Control-Allow-Origin": Deno.env.get("FRONTEND_URL") || "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey",
-    "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": Deno.env.get("FRONTEND_URL") || "*",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, Prefer, x-client-info",
+  "Access-Control-Max-Age": "86400",
+  "Content-Type": "application/json",
 };
+
 
 interface MetadataResult {
     title: string;
