@@ -1,44 +1,50 @@
 (function () {
     'use strict';
 
-    /* ===== CONFIG ===== */
-    var CFG_URL = 'https://kvxfxpqbnmplcuadjmpc.supabase.co';
-    var CFG_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2eGZ4cHFibm1wbGN1YWRqbXBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDk2NjUsImV4cCI6MjA5NjIyNTY2NX0.GQ5glAUeNb_6wMS9OvGBu25WPFa1yDs_hquGfYLXS-c';
+    /* ===========================================================
+       CONFIGURATION — Copy-paste safe URL construction
+       =========================================================== */
+    var DB_HOST = 'kvxfxpqbnmplcuadjmpc.supabase.co';
+    var SUPA_URL = 'https://' + DB_HOST;
+    var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2eGZ4cHFibm1wbGN1YWRqbXBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDk2NjUsImV4cCI6MjA5NjIyNTY2NX0.GQ5glAUeNb_6wMS9OvGBu25WPFa1yDs_hquGfYLXS-c';
 
-    CFG_URL = CFG_URL.replace(/\/+$/, '');
-    var FN = CFG_URL + '/functions/v1';
-    var REST = CFG_URL + '/rest/v1';
+    var FN_URL = SUPA_URL + '/functions/v1';
+    var REST = SUPA_URL + '/rest/v1';
 
-    /* ===== SAFE DOM HELPERS ===== */
+    /* ===========================================================
+       SAFE HELPERS
+       =========================================================== */
     function gid(id) { return document.getElementById(id); }
     function qsa(sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
-    function on(el, ev, fn) { if (el) el.addEventListener(ev, fn); }
+    function on(el, ev, fn) { if (el && el.addEventListener) { el.addEventListener(ev, fn); } }
     function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
     function escA(s) { return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
     function fmtD(d) { if (!d) return ''; try { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { return d; } }
     function fmtDT(d) { if (!d) return ''; try { var x = new Date(d); return x.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + x.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return d; } }
     function trunc(s, n) { return (!s || s.length <= n) ? s : s.substr(0, n) + '...'; }
 
-    /* ===== STATE ===== */
-    var S = { token: null, user: null, tab: 'courses', courses: [], filtered: [], editId: null, suggestions: [], logs: [], showArchived: false };
-
-    /* ===== COLUMN NAME MAP ===== */
+    /* Column name mapping: form field ID suffix -> DB column name */
     var TO_COL = { 'cert-type': 'cert_type', 'job-available': 'job_available', 'job-country': 'job_country', 'job-salary': 'job_salary', 'job-mode': 'job_mode' };
     function ck(formKey) { return TO_COL[formKey] || formKey; }
 
-    /* ===== DOM REFS ===== */
+    /* ===========================================================
+       STATE
+       =========================================================== */
+    var S = { token: null, user: null, tab: 'courses', courses: [], filtered: [], editId: null, suggestions: [], logs: [], showArchived: false };
+
+    /* ===========================================================
+       DOM REFERENCES
+       =========================================================== */
     var loginWrap, dashWrap, loginForm, loginEmail, loginPw, loginErr;
-    var navContainer, navItems, panels;
-    var logoutBtn;
+    var navContainer, navItems, panels, logoutBtn;
     var cSearch, cArchived, cList, cForm, cFormTitle, cStatus;
     var fetchMetaBtn, aiClassBtn, newBtn, archiveBtn, verifyBtn;
     var extraJson, jsonFb;
-    var dropZone, fileIn, importPrev, importSum, importBtn, exportCsv, exportJson;
+    var dropZone, fileIn, importPrev, importSum, importBtn, exportCsvBtn, exportJsonBtn;
     var sugListEl, sugBadge;
     var rateCont;
     var logBody, logAction, logFrom, logDevice, logApplyBtn, logExportBtn;
-    var analyticsEl;
-    var toasts;
+    var analyticsEl, toastBox;
     var fields = {};
 
     function cacheDom() {
@@ -70,8 +76,8 @@
         importPrev = gid('import-preview');
         importSum = gid('import-summary');
         importBtn = gid('import-btn');
-        exportCsv = gid('export-csv-btn');
-        exportJson = gid('export-json-btn');
+        exportCsvBtn = gid('export-csv-btn');
+        exportJsonBtn = gid('export-json-btn');
         sugListEl = gid('admin-suggestions-list');
         sugBadge = gid('suggestion-badge');
         rateCont = gid('ratings-container');
@@ -82,7 +88,7 @@
         logApplyBtn = gid('log-apply-filter');
         logExportBtn = gid('log-export-btn');
         analyticsEl = gid('analytics-container');
-        toasts = gid('admin-toast-container');
+        toastBox = gid('admin-toast-container');
 
         var names = ['title', 'link', 'platform', 'category', 'institution', 'instructor', 'difficulty', 'duration', 'mode', 'format', 'cost', 'certification', 'cert-type', 'validation', 'job-available', 'job-country', 'job-salary', 'job-mode', 'language'];
         for (var i = 0; i < names.length; i++) {
@@ -90,15 +96,30 @@
         }
     }
 
-    /* ===== INIT ===== */
+    /* ===========================================================
+       INIT
+       =========================================================== */
     document.addEventListener('DOMContentLoaded', function () {
         cacheDom();
+
+        /* Startup validation */
+        console.log('[Admin] API:', SUPA_URL);
+        console.log('[Admin] Nav items found:', navItems.length);
+        console.log('[Admin] Tab panels found:', panels.length);
+        if (ANON_KEY.length < 100) {
+            console.error('[Admin] ANON_KEY looks truncated.');
+        }
+
+        /* Check for stored session */
         var stored = sessionStorage.getItem('cu_admin_token');
         if (stored) { S.token = stored; showDash(); loadAll(); }
+
         bindEvents();
     });
 
-    /* ===== EVENTS ===== */
+    /* ===========================================================
+       EVENT BINDING — Both delegation AND direct binding
+       =========================================================== */
     function bindEvents() {
         on(loginForm, 'submit', handleLogin);
         on(logoutBtn, 'click', function () {
@@ -107,13 +128,28 @@
             showLogin();
         });
 
-        /* EVENT DELEGATION for nav — this is the key fix */
+        /* ---- NAV: Direct binding on each button ---- */
+        for (var i = 0; i < navItems.length; i++) {
+            (function (btn) {
+                btn.addEventListener('click', function () {
+                    var tab = btn.getAttribute('data-tab');
+                    console.log('[Admin] Nav click:', tab);
+                    switchTab(tab);
+                });
+            })(navItems[i]);
+        }
+
+        /* ---- NAV: Event delegation fallback ---- */
         on(navContainer, 'click', function (e) {
             var btn = e.target.closest('.admin-nav-item');
-            if (!btn) return;
-            switchTab(btn.getAttribute('data-tab'));
+            if (btn) {
+                var tab = btn.getAttribute('data-tab');
+                console.log('[Admin] Nav delegation:', tab);
+                switchTab(tab);
+            }
         });
 
+        /* ---- Course management ---- */
         on(cSearch, 'input', filterList);
         on(cArchived, 'change', function () { S.showArchived = cArchived.checked; loadCourses(); });
         on(newBtn, 'click', resetForm);
@@ -124,48 +160,60 @@
         on(verifyBtn, 'click', doVerify);
         on(extraJson, 'input', validateJson);
 
+        /* ---- Bulk operations ---- */
         on(dropZone, 'click', function () { if (fileIn) fileIn.click(); });
-        on(dropZone, 'dragover', function (e) { e.preventDefault(); dropZone.classList.add('dragover'); });
-        on(dropZone, 'dragleave', function () { dropZone.classList.remove('dragover'); });
+        on(dropZone, 'dragover', function (e) { e.preventDefault(); if (dropZone) dropZone.classList.add('dragover'); });
+        on(dropZone, 'dragleave', function () { if (dropZone) dropZone.classList.remove('dragover'); });
         on(dropZone, 'drop', handleDrop);
         on(fileIn, 'change', function (e) { if (e.target.files[0]) processFile(e.target.files[0]); });
         on(importBtn, 'click', bulkImport);
-        on(exportCsv, 'click', function () { doExport('csv'); });
-        on(exportJson, 'click', function () { doExport('json'); });
+        on(exportCsvBtn, 'click', function () { doExport('csv'); });
+        on(exportJsonBtn, 'click', function () { doExport('json'); });
 
+        /* ---- Logs ---- */
         on(logApplyBtn, 'click', loadLogs);
         on(logExportBtn, 'click', exportLogs);
     }
 
-    /* ===== AUTH ===== */
+    /* ===========================================================
+       AUTH
+       =========================================================== */
     function handleLogin(e) {
         e.preventDefault();
         if (loginErr) loginErr.classList.remove('visible');
         var email = loginEmail ? loginEmail.value.trim() : '';
         var pw = loginPw ? loginPw.value : '';
         if (!email || !pw) { showLoginErr('Enter email and password.'); return; }
-        fetch(CFG_URL + '/auth/v1/token?grant_type=password', {
+
+        fetch(SUPA_URL + '/auth/v1/token?grant_type=password', {
             method: 'POST',
-            headers: { 'apikey': CFG_KEY, 'Content-Type': 'application/json' },
+            headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email, password: pw })
-        }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-            .then(function (res) {
-                if (!res.ok) throw new Error(res.d.error_description || res.d.msg || 'Login failed');
-                S.token = res.d.access_token;
-                S.user = { email: email };
-                sessionStorage.setItem('cu_admin_token', res.d.access_token);
-                showDash();
-                loadAll();
-                toast('Logged in.', 'success');
-            }).catch(function (err) { showLoginErr(err.message); });
+        }).then(function (r) {
+            return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+        }).then(function (res) {
+            if (!res.ok) throw new Error(res.d.error_description || res.d.msg || 'Login failed');
+            S.token = res.d.access_token;
+            S.user = { email: email };
+            sessionStorage.setItem('cu_admin_token', res.d.access_token);
+            showDash();
+            loadAll();
+            toast('Logged in.', 'success');
+        }).catch(function (err) {
+            showLoginErr(err.message);
+        });
     }
 
     function showLoginErr(msg) { if (loginErr) { loginErr.textContent = msg; loginErr.classList.add('visible'); } }
     function showDash() { if (loginWrap) loginWrap.classList.add('hidden'); if (dashWrap) dashWrap.classList.remove('hidden'); }
     function showLogin() { if (loginWrap) loginWrap.classList.remove('hidden'); if (dashWrap) dashWrap.classList.add('hidden'); }
 
-    /* ===== API ===== */
-    function authH() { return { 'apikey': CFG_KEY, 'Authorization': 'Bearer ' + S.token, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }; }
+    /* ===========================================================
+       API
+       =========================================================== */
+    function authH() {
+        return { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + S.token, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+    }
 
     function aGet(ep, params) {
         params = params || {};
@@ -202,15 +250,21 @@
     }
 
     function aFn(name, body) {
-        return fetch(FN + '/' + name, { method: 'POST', headers: authH(), body: JSON.stringify(body) })
+        return fetch(FN_URL + '/' + name, { method: 'POST', headers: authH(), body: JSON.stringify(body) })
             .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.message || 'Error ' + r.status); return d; }); });
     }
 
-    /* ===== TABS ===== */
+    /* ===========================================================
+       TABS
+       =========================================================== */
     function switchTab(id) {
         S.tab = id;
-        for (var i = 0; i < navItems.length; i++) navItems[i].classList.toggle('active', navItems[i].getAttribute('data-tab') === id);
-        for (var j = 0; j < panels.length; j++) panels[j].classList.toggle('active', panels[j].id === 'tab-' + id);
+        for (var i = 0; i < navItems.length; i++) {
+            navItems[i].classList.toggle('active', navItems[i].getAttribute('data-tab') === id);
+        }
+        for (var j = 0; j < panels.length; j++) {
+            panels[j].classList.toggle('active', panels[j].id === 'tab-' + id);
+        }
         if (id === 'courses') loadCourses();
         else if (id === 'suggestions') loadSuggestions();
         else if (id === 'ratings') loadRatings();
@@ -220,7 +274,9 @@
 
     function loadAll() { loadCourses(); loadSuggestions(); loadAnalytics(); }
 
-    /* ===== COURSES ===== */
+    /* ===========================================================
+       COURSES
+       =========================================================== */
     function loadCourses() {
         aGet('courses', { status: S.showArchived ? 'eq.archived' : 'eq.active', order: 'created_at.desc', limit: 500 })
             .then(function (r) { S.courses = r.data; filterList(); })
@@ -229,9 +285,9 @@
 
     function filterList() {
         var q = cSearch ? cSearch.value.toLowerCase().trim() : '';
-        S.filtered = q
-            ? S.courses.filter(function (c) { return c.title.toLowerCase().indexOf(q) >= 0 || (c.platform || '').toLowerCase().indexOf(q) >= 0; })
-            : S.courses;
+        S.filtered = q ? S.courses.filter(function (c) {
+            return c.title.toLowerCase().indexOf(q) >= 0 || (c.platform || '').toLowerCase().indexOf(q) >= 0;
+        }) : S.courses;
         renderList();
     }
 
@@ -243,7 +299,7 @@
             var c = S.filtered[i];
             h += '<div class="admin-course-item' + (S.editId === c.id ? ' selected' : '') + '" data-id="' + c.id + '">' +
                 '<span class="admin-course-item-title">' + esc(c.title) + '</span>' +
-                '<span class="admin-course-item-platform">' + esc(c.platform || '—') + '</span>' +
+                '<span class="admin-course-item-platform">' + esc(c.platform || '--') + '</span>' +
                 '<span class="admin-course-item-status status-' + c.status + '">' + c.status + '</span></div>';
         }
         cList.innerHTML = h;
@@ -287,8 +343,8 @@
         e.preventDefault();
         var title = fields.title ? fields.title.value.trim() : '';
         var link = fields.link ? fields.link.value.trim() : '';
-        if (!title || title.length < 5) { toast('Title must be 5-200 characters.', 'error'); return; }
-        if (!link || !/^https?:\/\//.test(link)) { toast('Enter a valid URL.', 'error'); return; }
+        if (!title || title.length < 5) { toast('Title 5-200 chars.', 'error'); return; }
+        if (!link || !/^https?:\/\//.test(link)) { toast('Valid URL required.', 'error'); return; }
 
         var extra = {};
         if (extraJson && extraJson.value.trim()) {
@@ -328,7 +384,7 @@
         aFn('extract-metadata', { url: url }).then(function (d) {
             if (d.title && fields.title && !fields.title.value) fields.title.value = d.title;
             if (d.platform && fields.platform && !fields.platform.value) fields.platform.value = d.platform;
-            toast('Metadata from ' + (d.source || 'API') + '.', 'success');
+            toast('Metadata fetched.', 'success');
         }).catch(function () { toast('Fetch failed. Enter manually.', 'error'); })
             .finally(function () { if (fetchMetaBtn) { fetchMetaBtn.disabled = false; fetchMetaBtn.textContent = 'Fetch Metadata'; } });
     }
@@ -378,40 +434,53 @@
         }
     }
 
-    /* ===== BULK ===== */
+    /* ===========================================================
+       BULK IMPORT / EXPORT
+       =========================================================== */
     var impData = [];
-    function handleDrop(e) { e.preventDefault(); if (dropZone) dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        if (dropZone) dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+    }
+
     function processFile(f) {
-        var r = new FileReader();
-        r.onload = function (e) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
             try {
                 impData = f.name.endsWith('.json') ? JSON.parse(e.target.result) : csv2json(e.target.result);
                 validateImport();
             } catch (err) { toast('Parse error: ' + err.message, 'error'); }
         };
-        r.readAsText(f);
+        reader.readAsText(f);
     }
+
     function csv2json(csv) {
         var lines = csv.split('\n').filter(function (l) { return l.trim(); });
         if (lines.length < 2) return [];
-        var h = lines[0].split(',').map(function (x) { return x.trim().replace(/"/g, ''); });
+        var hdrs = lines[0].split(',').map(function (x) { return x.trim().replace(/"/g, ''); });
         return lines.slice(1).map(function (l) {
-            var v = l.split(',').map(function (x) { return x.trim().replace(/"/g, ''); });
-            var o = {}; h.forEach(function (k, i) { if (v[i]) o[k] = v[i]; }); return o;
+            var vals = l.split(',').map(function (x) { return x.trim().replace(/"/g, ''); });
+            var obj = {};
+            hdrs.forEach(function (k, i) { if (vals[i]) obj[k] = vals[i]; });
+            return obj;
         });
     }
+
     function validateImport() {
         var ok = 0, err = 0, rows = '';
         for (var i = 0; i < impData.length; i++) {
             var r = impData[i];
             var v = r.title && r.title.length >= 5 && r.link && /^https?:\/\//.test(r.link);
             if (v) ok++; else err++;
-            rows += '<tr class="' + (v ? '' : 'error-row') + '"><td>' + (i + 1) + '</td><td>' + esc(r.title || '—') + '</td><td>' + esc(r.platform || '') + '</td><td>' + (v ? 'OK' : 'Error') + '</td></tr>';
+            rows += '<tr class="' + (v ? '' : 'error-row') + '"><td>' + (i + 1) + '</td><td>' + esc(r.title || '--') + '</td><td>' + esc(r.platform || '') + '</td><td>' + (v ? 'OK' : 'Error') + '</td></tr>';
         }
         if (importPrev) importPrev.innerHTML = '<table><thead><tr><th>#</th><th>Title</th><th>Platform</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
         if (importSum) importSum.innerHTML = '<span class="valid">' + ok + ' valid</span><span class="errors">' + err + ' errors</span>';
         if (importBtn) importBtn.classList.toggle('hidden', ok === 0);
     }
+
     function bulkImport() {
         if (importBtn) { importBtn.disabled = true; importBtn.textContent = 'Importing...'; }
         var done = 0, skip = 0, idx = 0;
@@ -424,18 +493,19 @@
             }
             var r = impData[idx++];
             if (!r.title || r.title.length < 5 || !r.link || !/^https?:\/\//.test(r.link)) { skip++; next(); return; }
-            var b = { title: r.title, link: r.link, status: 'active' };
-            if (r.platform) b.platform = r.platform;
-            if (r.category) b.category = r.category;
-            if (r.cost) b.cost = r.cost;
-            aPost('courses', b).then(function (res) {
+            var body = { title: r.title, link: r.link, status: 'active' };
+            if (r.platform) body.platform = r.platform;
+            if (r.category) body.category = r.category;
+            if (r.cost) body.cost = r.cost;
+            aPost('courses', body).then(function (res) {
                 done++;
                 var c = Array.isArray(res) ? res[0] : res;
-                if (c && c.id) aFn('generate-embedding', { course_id: c.id, title: b.title, description: '', category: b.category || '' }).catch(function () { });
+                if (c && c.id) aFn('generate-embedding', { course_id: c.id, title: body.title, description: '', category: body.category || '' }).catch(function () { });
             }).catch(function () { skip++; }).finally(function () { setTimeout(next, 200); });
         }
         next();
     }
+
     function doExport(fmt) {
         aGet('courses', { status: 'eq.active', limit: 10000, order: 'created_at.desc' }).then(function (r) {
             var content, filename, mime;
@@ -456,7 +526,9 @@
         }).catch(function (e) { toast('Export failed: ' + e.message, 'error'); });
     }
 
-    /* ===== SUGGESTIONS ===== */
+    /* ===========================================================
+       SUGGESTIONS
+       =========================================================== */
     function loadSuggestions() {
         aGet('suggestions', { order: 'created_at.desc', limit: 200 }).then(function (r) {
             S.suggestions = r.data;
@@ -465,6 +537,7 @@
             renderSugs();
         }).catch(function (e) { toast('Load failed: ' + e.message, 'error'); });
     }
+
     function renderSugs() {
         if (!sugListEl) return;
         if (!S.suggestions.length) { sugListEl.innerHTML = '<div class="empty-state"><p>No suggestions yet.</p></div>'; return; }
@@ -472,14 +545,14 @@
         for (var i = 0; i < S.suggestions.length; i++) {
             var s = S.suggestions[i];
             h += '<div class="admin-suggestion-item"><div class="admin-suggestion-info"><h4>' + esc(s.title) + '</h4>' +
-                '<div class="detail-row"><span><a href="' + escA(s.link) + '" target="_blank">' + esc(s.link) + '</a></span>' +
+                '<div class="detail-row"><span><a href="' + escA(s.link) + '" target="_blank">' + esc(trunc(s.link, 50)) + '</a></span>' +
                 (s.platform ? '<span>' + esc(s.platform) + '</span>' : '') + '<span>Status: <b>' + s.status + '</b></span></div>' +
                 '<div class="detail-row">' + (s.user_name ? '<span>By: ' + esc(s.user_name) + '</span>' : '') +
                 (s.user_email ? '<span>' + esc(s.user_email) + '</span>' : '') + '<span>' + fmtD(s.created_at) + '</span></div>' +
                 (s.notes ? '<p style="margin-top:0.4rem;font-size:0.8rem;color:var(--text-secondary);font-style:italic">' + esc(s.notes) + '</p>' : '') + '</div>';
             if (s.status === 'pending') {
                 h += '<div class="admin-suggestion-actions">' +
-                    '<button type="button" class="btn btn-primary btn-sm appr-btn" data-id="' + s.id + '">Approve</button>' +
+                    '<button type="button" class="btn btn-primary btn-sm appr-btn" data-id="' + s.id + '">Approve</button> ' +
                     '<button type="button" class="btn btn-danger btn-sm rej-btn" data-id="' + s.id + '">Reject</button></div>';
             }
             h += '</div>';
@@ -491,10 +564,11 @@
             (function (b) { on(b, 'click', function () { approveSug(b.getAttribute('data-id')); }); })(apprBtns[a]);
         }
         var rejBtns = qsa('.rej-btn');
-        for (var r = 0; r < rejBtns.length; r++) {
-            (function (b) { on(b, 'click', function () { rejectSug(b.getAttribute('data-id')); }); })(rejBtns[r]);
+        for (var ri = 0; ri < rejBtns.length; ri++) {
+            (function (b) { on(b, 'click', function () { rejectSug(b.getAttribute('data-id')); }); })(rejBtns[ri]);
         }
     }
+
     function approveSug(id) {
         var s = null;
         for (var i = 0; i < S.suggestions.length; i++) { if (S.suggestions[i].id === id) { s = S.suggestions[i]; break; } }
@@ -507,6 +581,7 @@
             .then(function () { toast('Approved. Form pre-filled.', 'success'); switchTab('courses'); loadSuggestions(); })
             .catch(function (e) { toast('Error: ' + e.message, 'error'); });
     }
+
     function rejectSug(id) {
         if (!confirm('Reject this suggestion?')) return;
         aPatch('suggestions', { status: 'rejected', reviewed_at: new Date().toISOString(), reviewed_by: (S.user && S.user.email) || 'admin' }, { id: 'eq.' + id })
@@ -514,7 +589,9 @@
             .catch(function (e) { toast('Error: ' + e.message, 'error'); });
     }
 
-    /* ===== RATINGS ===== */
+    /* ===========================================================
+       RATINGS / LOGS / ANALYTICS
+       =========================================================== */
     function loadRatings() {
         if (!rateCont) return;
         aGet('courses', { status: 'eq.active', rating_count: 'gt.0', order: 'rating_avg.desc', limit: 50 }).then(function (r) {
@@ -529,7 +606,6 @@
         }).catch(function (e) { toast('Load failed: ' + e.message, 'error'); });
     }
 
-    /* ===== LOGS ===== */
     function loadLogs() {
         var pr = { order: 'timestamp.desc', limit: 200 };
         if (logAction && logAction.value) pr.action = 'eq.' + logAction.value;
@@ -537,20 +613,22 @@
         if (logDevice && logDevice.value) pr.device_type = 'eq.' + logDevice.value;
         aGet('activity_log', pr).then(function (r) { S.logs = r.data; renderLogs(); }).catch(function (e) { toast('Logs failed: ' + e.message, 'error'); });
     }
+
     function renderLogs() {
         if (!logBody) return;
-        if (!S.logs.length) { logBody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding:1.5rem;color:var(--text-muted)">No logs found.</td></tr>'; return; }
+        if (!S.logs.length) { logBody.innerHTML = '<tr><td colspan="7" style="padding:1.5rem;color:var(--text-muted);text-align:center">No logs found.</td></tr>'; return; }
         var h = '';
         for (var i = 0; i < S.logs.length; i++) {
             var l = S.logs[i];
             h += '<tr><td>' + fmtDT(l.timestamp) + '</td><td><span class="badge badge-category">' + esc(l.action) + '</span></td>' +
-                '<td>' + esc(trunc(JSON.stringify(l.details || {}), 60)) + '</td><td>' + esc(l.ip_address || '—') + '</td>' +
-                '<td>' + esc(l.device_type || '—') + '</td><td>' + esc(l.browser || '—') + '</td><td>' + esc(l.os || '—') + '</td></tr>';
+                '<td>' + esc(trunc(JSON.stringify(l.details || {}), 60)) + '</td><td>' + esc(l.ip_address || '--') + '</td>' +
+                '<td>' + esc(l.device_type || '--') + '</td><td>' + esc(l.browser || '--') + '</td><td>' + esc(l.os || '--') + '</td></tr>';
         }
         logBody.innerHTML = h;
     }
+
     function exportLogs() {
-        if (!S.logs.length) { toast('No logs to export.', 'error'); return; }
+        if (!S.logs.length) { toast('No logs.', 'error'); return; }
         var hd = ['timestamp', 'action', 'details', 'ip_address', 'device_type', 'browser', 'os'];
         var rows = S.logs.map(function (l) {
             return hd.map(function (h) { return '"' + ((h === 'details' ? JSON.stringify(l[h]) : l[h]) || '').toString().replace(/"/g, '""') + '"'; }).join(',');
@@ -559,10 +637,9 @@
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a'); a.href = url; a.download = 'logs.csv'; a.click();
         URL.revokeObjectURL(url);
-        toast('Logs exported.', 'success');
+        toast('Exported.', 'success');
     }
 
-    /* ===== ANALYTICS ===== */
     function loadAnalytics() {
         if (!analyticsEl) return;
         Promise.all([
@@ -571,12 +648,8 @@
             aGet('activity_log', { action: 'eq.search', select: 'id,timestamp', limit: 1000 }),
             aGet('activity_log', { action: 'eq.course_click', select: 'id,timestamp', limit: 1000 })
         ]).then(function (r) {
-            var now = new Date();
-            var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            var week = new Date(today.getTime() - 7 * 86400000);
-            var sug = r[1].data || [];
-            var srch = r[2].data || [];
-            var clk = r[3].data || [];
+            var now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate()), week = new Date(today.getTime() - 7 * 86400000);
+            var sug = r[1].data || [], srch = r[2].data || [], clk = r[3].data || [];
             var a = {
                 courses: r[0].total || 0,
                 pending: sug.filter(function (s) { return s.status === 'pending'; }).length,
@@ -586,34 +659,27 @@
                 sw: srch.filter(function (s) { return new Date(s.timestamp) >= week; }).length,
                 ct: clk.filter(function (c) { return new Date(c.timestamp) >= today; }).length,
                 cw: clk.filter(function (c) { return new Date(c.timestamp) >= week; }).length,
-                ts: srch.length,
-                tsug: sug.length
+                ts: srch.length, tsug: sug.length
             };
             analyticsEl.innerHTML =
-                '<div class="analytics-overview">' +
-                ac(a.courses, 'Courses') + ac(a.pending, 'Pending') + ac(a.st, 'Searches Today') + ac(a.sw, 'Searches Week') +
-                ac(a.ct, 'Clicks Today') + ac(a.cw, 'Clicks Week') + ac(a.approved, 'Approved') + ac(a.ts, 'Total Searches') +
-                '</div>' +
-                '<div class="analytics-charts">' +
-                '<div class="chart-container"><div class="chart-title">Suggestions</div>' +
-                br('Pending', a.pending, a.tsug) + br('Approved', a.approved, a.tsug) + br('Rejected', a.rejected, a.tsug) +
-                '</div>' +
-                '<div class="chart-container"><div class="chart-title">Search Activity</div>' +
-                br('Today', a.st, Math.max(a.sw, 1)) + br('Week', a.sw, Math.max(a.sw, 1)) + br('All Time', a.ts, Math.max(a.ts, 1)) +
-                '</div>' +
-                '</div>';
+                '<div class="analytics-overview">' + ac(a.courses, 'Courses') + ac(a.pending, 'Pending') + ac(a.st, 'Searches Today') + ac(a.sw, 'Searches Week') + ac(a.ct, 'Clicks Today') + ac(a.cw, 'Clicks Week') + ac(a.approved, 'Approved') + ac(a.ts, 'Total Searches') + '</div>' +
+                '<div class="analytics-charts"><div class="chart-container"><div class="chart-title">Suggestions</div>' + br('Pending', a.pending, a.tsug) + br('Approved', a.approved, a.tsug) + br('Rejected', a.rejected, a.tsug) + '</div>' +
+                '<div class="chart-container"><div class="chart-title">Search Activity</div>' + br('Today', a.st, Math.max(a.sw, 1)) + br('Week', a.sw, Math.max(a.sw, 1)) + br('All Time', a.ts, Math.max(a.ts, 1)) + '</div></div>';
         }).catch(function (e) { toast('Analytics error: ' + e.message, 'error'); });
     }
+
     function ac(v, l) { return '<div class="analytics-card"><div class="analytics-card-value">' + v + '</div><div class="analytics-card-label">' + l + '</div></div>'; }
     function br(l, v, m) { var p = m > 0 ? Math.min(100, Math.round(v / m * 100)) : 0; return '<div class="bar-row"><span class="bar-label">' + l + '</span><div class="bar-track"><div class="bar-fill" style="width:' + p + '%"></div></div><span class="bar-value">' + v + '</span></div>'; }
 
-    /* ===== TOAST ===== */
+    /* ===========================================================
+       TOAST
+       =========================================================== */
     function toast(msg, type) {
-        if (!toasts) return;
+        if (!toastBox) return;
         var t = document.createElement('div');
         t.className = 'toast toast-' + (type || 'info');
         t.textContent = msg;
-        toasts.appendChild(t);
+        toastBox.appendChild(t);
         setTimeout(function () { if (t.parentNode) t.remove(); }, 4000);
     }
 
