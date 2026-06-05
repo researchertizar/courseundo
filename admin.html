@@ -4,264 +4,351 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Courseundo — Admin</title>
+    <meta name="theme-color" content="#0D0D0D">
+    <title>Admin — Courseundo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙</text></svg>">
 </head>
 
-<body>
+<body class="admin-body">
 
-    <div id="login-wrapper" class="admin-login-wrapper">
-        <div class="admin-login-card">
-            <h1>Course<span>undo</span></h1>
-            <p class="login-subtitle">Admin Dashboard</p>
-            <div id="login-error" class="login-error"></div>
-            <form id="login-form" autocomplete="off">
-                <div class="form-group" style="margin-bottom:0.75rem">
-                    <label class="form-label" for="login-email">Email</label>
-                    <input type="email" id="login-email" class="form-input" placeholder="admin@example.com" required>
-                </div>
-                <div class="form-group" style="margin-bottom:0.75rem">
-                    <label class="form-label" for="login-password">Password</label>
-                    <input type="password" id="login-password" class="form-input" placeholder="Password" required>
-                </div>
-                <button type="submit" class="btn btn-primary" style="width:100%">Sign In</button>
-            </form>
-        </div>
+    <!-- ==================== LOGIN ==================== -->
+    <div id="login-wrapper" class="login-wrapper">
+        <form id="login-form" class="login-card" novalidate>
+            <div class="login-logo">
+                <span class="logo-icon">C</span>
+                <span class="logo-text">courseundo</span>
+            </div>
+            <h1 class="login-title">Admin Dashboard</h1>
+            <p class="login-subtitle">Sign in to manage courses and suggestions</p>
+            <div class="login-error" id="login-error"></div>
+            <div class="form-group">
+                <label class="form-label" for="login-email">Email</label>
+                <input type="email" id="login-email" class="form-input" placeholder="admin@example.com" required
+                    autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="login-password">Password</label>
+                <input type="password" id="login-password" class="form-input" placeholder="Enter password" required
+                    autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+        </form>
     </div>
 
-    <div id="dashboard-wrapper" class="admin-wrapper hidden">
-        <aside class="admin-sidebar">
-            <div class="admin-sidebar-brand">Course<span>undo</span></div>
-            <nav class="admin-nav" id="admin-nav">
-                <button type="button" class="admin-nav-item active" data-tab="courses">&#128218;
-                    <span>Courses</span></button>
-                <button type="button" class="admin-nav-item" data-tab="bulk">&#128229; <span>Bulk Ops</span></button>
-                <button type="button" class="admin-nav-item" data-tab="suggestions">&#9993;
-                    <span>Suggestions</span><span id="suggestion-badge" class="badge hidden">0</span></button>
-                <button type="button" class="admin-nav-item" data-tab="ratings">&#11088; <span>Ratings</span></button>
-                <button type="button" class="admin-nav-item" data-tab="logs">&#128203; <span>Logs</span></button>
-                <button type="button" class="admin-nav-item" data-tab="analytics">&#128202;
-                    <span>Analytics</span></button>
+    <!-- ==================== DASHBOARD ==================== -->
+    <div id="dashboard-wrapper" class="dashboard-wrapper hidden">
+
+        <!-- SIDEBAR -->
+        <aside class="admin-sidebar" id="admin-sidebar">
+            <div class="admin-sidebar-header">
+                <a href="/" class="logo" aria-label="Courseundo Home">
+                    <span class="logo-icon">C</span>
+                    <span class="logo-text">courseundo</span>
+                </a>
+                <button class="admin-sidebar-close" id="admin-sidebar-close" aria-label="Close sidebar">&times;</button>
+            </div>
+
+            <nav id="admin-nav" class="admin-nav" role="navigation" aria-label="Admin navigation">
+                <button type="button" class="admin-nav-item active" data-tab="courses">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                    </svg>
+                    <span>Courses</span>
+                </button>
+                <button type="button" class="admin-nav-item" data-tab="suggestions">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="12" y1="18" x2="12" y2="12" />
+                        <line x1="9" y1="15" x2="15" y2="15" />
+                    </svg>
+                    <span>Suggestions</span>
+                    <span class="admin-badge hidden" id="suggestion-badge">0</span>
+                </button>
+                <button type="button" class="admin-nav-item" data-tab="bulk">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <span>Import / Export</span>
+                </button>
+                <button type="button" class="admin-nav-item" data-tab="ratings">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round">
+                        <polygon
+                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                    <span>Ratings</span>
+                </button>
+                <button type="button" class="admin-nav-item" data-tab="logs">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                    </svg>
+                    <span>Activity Log</span>
+                </button>
+                <button type="button" class="admin-nav-item" data-tab="analytics">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round">
+                        <line x1="18" y1="20" x2="18" y2="10" />
+                        <line x1="12" y1="20" x2="12" y2="4" />
+                        <line x1="6" y1="20" x2="6" y2="14" />
+                    </svg>
+                    <span>Analytics</span>
+                </button>
             </nav>
-            <div style="padding:0.5rem;margin-top:auto;border-top:1px solid var(--border);padding-top:0.75rem">
-                <button type="button" id="logout-btn" class="btn btn-secondary btn-sm" style="width:100%">Sign
-                    Out</button>
+
+            <div class="admin-sidebar-footer">
+                <a href="/" class="btn btn-ghost btn-sm btn-block" style="margin-bottom:0.5rem">View Site</a>
+                <button type="button" id="logout-btn" class="btn btn-ghost btn-sm btn-block">Sign Out</button>
             </div>
         </aside>
 
+        <!-- SIDEBAR MOBILE TOGGLE -->
+        <button class="admin-sidebar-toggle" id="admin-sidebar-toggle" aria-label="Open sidebar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+        </button>
+
+        <!-- MAIN CONTENT -->
         <main class="admin-main">
 
-            <!-- COURSES -->
-            <div id="tab-courses" class="admin-tab-panel active">
-                <h2 class="admin-page-title">Courses</h2>
-                <div style="display:flex;gap:0.75rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap">
-                    <input type="text" id="course-search" class="form-input" placeholder="Search..."
-                        style="max-width:280px;padding:0.45rem 0.7rem;font-size:0.8rem">
-                    <label
-                        style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);display:flex;align-items:center;gap:0.3rem;cursor:pointer">
-                        <input type="checkbox" id="show-archived"> Archived
+            <!-- COURSES TAB -->
+            <section class="admin-tab-panel active" id="tab-courses">
+                <div class="admin-panel-header">
+                    <h2 class="admin-panel-title">Course Management</h2>
+                    <button type="button" id="new-course-btn" class="btn btn-primary btn-sm">+ New Course</button>
+                </div>
+                <div class="admin-search-row">
+                    <input type="text" id="course-search" class="form-input" placeholder="Search courses...">
+                    <label class="admin-checkbox-label">
+                        <input type="checkbox" id="show-archived"> Show archived
                     </label>
-                    <button type="button" id="new-course-btn" class="btn btn-secondary btn-sm"
-                        style="margin-left:auto">+ New</button>
                 </div>
-                <div id="admin-course-list" class="admin-course-list"></div>
-                <h3 id="course-form-title"
-                    style="font-family:var(--font-display);font-size:1.2rem;font-weight:400;margin:1.25rem 0 0.75rem;color:var(--text-primary)">
-                    Add New Course</h3>
-                <p id="course-field-status"
-                    style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);margin-bottom:0.75rem">
-                </p>
-                <form id="course-form" autocomplete="off">
-                    <div class="admin-form-grid">
-                        <div class="form-group full-width">
-                            <label class="form-label" for="course-title">Title <span class="required">*</span></label>
-                            <input type="text" id="course-title" class="form-input" placeholder="Course title" required
-                                minlength="5" maxlength="200">
-                        </div>
-                        <div class="form-group full-width">
-                            <label class="form-label" for="course-link">Link <span class="required">*</span></label>
-                            <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
-                                <input type="url" id="course-link" class="form-input" placeholder="https://..." required
-                                    style="flex:1;min-width:200px">
-                                <button type="button" id="fetch-meta-btn" class="btn btn-secondary btn-sm">Fetch
-                                    Metadata</button>
-                                <button type="button" id="ai-classify-btn" class="btn btn-secondary btn-sm">AI
-                                    Classify</button>
+                <div class="admin-split">
+                    <div class="admin-course-list" id="admin-course-list"></div>
+                    <div class="admin-course-form-wrapper">
+                        <h3 id="course-form-title" class="form-section-title">Add New Course</h3>
+                        <form id="course-form" class="admin-form" novalidate>
+                            <div class="form-row">
+                                <div class="form-group"><label class="form-label" for="course-title">Title <span
+                                            class="req">*</span></label><input type="text" id="course-title"
+                                        class="form-input" required minlength="5" maxlength="200"></div>
+                                <div class="form-group"><label class="form-label" for="course-link">URL <span
+                                            class="req">*</span></label><input type="url" id="course-link"
+                                        class="form-input" required></div>
                             </div>
-                        </div>
-                        <div class="form-group"><label class="form-label" for="course-platform">Platform</label><input
-                                type="text" id="course-platform" class="form-input" list="dl-platform"
-                                placeholder="Coursera..."><datalist id="dl-platform">
-                                <option value="Coursera">
-                                <option value="edX">
-                                <option value="Udemy">
-                                <option value="Khan Academy">
-                                <option value="Other">
-                            </datalist></div>
-                        <div class="form-group"><label class="form-label" for="course-category">Category</label><input
-                                type="text" id="course-category" class="form-input" list="dl-cat"
-                                placeholder="Programming..."><datalist id="dl-cat">
-                                <option value="Programming">
-                                <option value="Data Science">
-                                <option value="AI/ML">
-                                <option value="Business">
-                                <option value="Other">
-                            </datalist></div>
-                        <div class="form-group"><label class="form-label"
-                                for="course-institution">Institution</label><input type="text" id="course-institution"
-                                class="form-input" placeholder="University/company"></div>
-                        <div class="form-group"><label class="form-label"
-                                for="course-instructor">Instructor</label><input type="text" id="course-instructor"
-                                class="form-input" placeholder="Name(s)"></div>
-                        <div class="form-group"><label class="form-label"
-                                for="course-difficulty">Difficulty</label><select id="course-difficulty"
-                                class="form-input">
-                                <option value="">—</option>
-                                <option value="Beginner">Beginner</option>
-                                <option value="Intermediate">Intermediate</option>
-                                <option value="Advanced">Advanced</option>
-                            </select></div>
-                        <div class="form-group"><label class="form-label" for="course-duration">Duration</label><input
-                                type="text" id="course-duration" class="form-input" placeholder="30 hours, 6 weeks">
-                        </div>
-                        <div class="form-group"><label class="form-label" for="course-mode">Mode</label><input
-                                type="text" id="course-mode" class="form-input" list="dl-mode"
-                                placeholder="Self-paced..."><datalist id="dl-mode">
-                                <option value="Self-paced">
-                                <option value="Instructor-led">
-                            </datalist></div>
-                        <div class="form-group"><label class="form-label" for="course-format">Format</label><input
-                                type="text" id="course-format" class="form-input" list="dl-fmt"
-                                placeholder="Video..."><datalist id="dl-fmt">
-                                <option value="Video">
-                                <option value="Text">
-                                <option value="Interactive">
-                                <option value="Mixed">
-                            </datalist></div>
-                        <div class="form-group"><label class="form-label" for="course-cost">Cost</label><select
-                                id="course-cost" class="form-input">
-                                <option value="">—</option>
-                                <option value="Free">Free</option>
-                                <option value="Paid">Paid</option>
-                                <option value="Subscription">Subscription</option>
-                                <option value="Freemium">Freemium</option>
-                            </select></div>
-                        <div class="form-group"><label class="form-label"
-                                for="course-certification">Certification</label><select id="course-certification"
-                                class="form-input">
-                                <option value="">—</option>
-                                <option value="Yes">Yes</option>
-                                <option value="No">No</option>
-                            </select></div>
-                        <div class="form-group"><label class="form-label" for="course-cert-type">Cert Type</label><input
-                                type="text" id="course-cert-type" class="form-input"
-                                placeholder="Free, Paid, Verified..."></div>
-                        <div class="form-group"><label class="form-label"
-                                for="course-validation">Validation</label><input type="text" id="course-validation"
-                                class="form-input" placeholder="Accredited..."></div>
-                        <div class="form-group"><label class="form-label" for="course-job-available">Jobs</label><select
-                                id="course-job-available" class="form-input">
-                                <option value="">—</option>
-                                <option value="Yes">Yes</option>
-                                <option value="No">No</option>
-                            </select></div>
-                        <div class="form-group"><label class="form-label" for="course-job-country">Job
-                                Country</label><input type="text" id="course-job-country" class="form-input"
-                                placeholder="USA, Remote..."></div>
-                        <div class="form-group"><label class="form-label" for="course-job-salary">Salary</label><input
-                                type="text" id="course-job-salary" class="form-input" placeholder="60k-$90k"></div>
-                        <div class="form-group"><label class="form-label" for="course-job-mode">Job Mode</label><input
-                                type="text" id="course-job-mode" class="form-input" list="dl-jm"
-                                placeholder="Remote..."><datalist id="dl-jm">
-                                <option value="Remote">
-                                <option value="On-site">
-                                <option value="Hybrid">
-                            </datalist></div>
-                        <div class="form-group"><label class="form-label" for="course-language">Language</label><input
-                                type="text" id="course-language" class="form-input" list="dl-lang"
-                                placeholder="English..."><datalist id="dl-lang">
-                                <option value="English">
-                                <option value="Spanish">
-                                <option value="French">
-                                <option value="Hindi">
-                                <option value="Chinese">
-                            </datalist></div>
-                        <div class="form-group full-width">
-                            <label class="form-label" for="course-extra-fields">Extra Fields (JSON)</label>
-                            <textarea id="course-extra-fields" class="form-input json-input"
-                                placeholder='{"prerequisite":"Basic Python"}'></textarea>
-                            <span id="json-feedback" class="form-hint"></span>
-                        </div>
+                            <div class="form-row form-row-3">
+                                <div class="form-group"><label class="form-label"
+                                        for="course-platform">Platform</label><input type="text" id="course-platform"
+                                        class="form-input"></div>
+                                <div class="form-group"><label class="form-label"
+                                        for="course-category">Category</label><select id="course-category"
+                                        class="form-input">
+                                        <option value="">Select</option>
+                                        <option>Computer Science</option>
+                                        <option>Data Science</option>
+                                        <option>Business</option>
+                                        <option>AI & ML</option>
+                                        <option>Design</option>
+                                        <option>Health</option>
+                                        <option>Language</option>
+                                    </select></div>
+                                <div class="form-group"><label class="form-label"
+                                        for="course-institution">Institution</label><input type="text"
+                                        id="course-institution" class="form-input"></div>
+                            </div>
+                            <div class="form-row form-row-3">
+                                <div class="form-group"><label class="form-label"
+                                        for="course-instructor">Instructor</label><input type="text"
+                                        id="course-instructor" class="form-input"></div>
+                                <div class="form-group"><label class="form-label"
+                                        for="course-difficulty">Difficulty</label><select id="course-difficulty"
+                                        class="form-input">
+                                        <option value="">Select</option>
+                                        <option>Beginner</option>
+                                        <option>Intermediate</option>
+                                        <option>Advanced</option>
+                                    </select></div>
+                                <div class="form-group"><label class="form-label"
+                                        for="course-duration">Duration</label><input type="text" id="course-duration"
+                                        class="form-input" placeholder="e.g. 8 weeks"></div>
+                            </div>
+                            <div class="form-row form-row-3">
+                                <div class="form-group"><label class="form-label" for="course-mode">Mode</label><select
+                                        id="course-mode" class="form-input">
+                                        <option value="">Select</option>
+                                        <option>Online</option>
+                                        <option>Offline</option>
+                                        <option>Hybrid</option>
+                                    </select></div>
+                                <div class="form-group"><label class="form-label"
+                                        for="course-format">Format</label><select id="course-format" class="form-input">
+                                        <option value="">Select</option>
+                                        <option>Self-paced</option>
+                                        <option>Instructor-led</option>
+                                        <option>Cohort-based</option>
+                                    </select></div>
+                                <div class="form-group"><label class="form-label" for="course-cost">Cost</label><select
+                                        id="course-cost" class="form-input">
+                                        <option value="">Select</option>
+                                        <option>Free</option>
+                                        <option>Paid</option>
+                                    </select></div>
+                            </div>
+                            <div class="form-row form-row-3">
+                                <div class="form-group"><label class="form-label"
+                                        for="course-certification">Certification</label><select
+                                        id="course-certification" class="form-input">
+                                        <option value="">Select</option>
+                                        <option>Yes</option>
+                                        <option>No</option>
+                                    </select></div>
+                                <div class="form-group"><label class="form-label" for="course-cert-type">Certificate
+                                        Type</label><input type="text" id="course-cert-type" class="form-input"
+                                        placeholder="e.g. Verified Certificate"></div>
+                                <div class="form-group"><label class="form-label"
+                                        for="course-validation">Validation</label><select id="course-validation"
+                                        class="form-input">
+                                        <option value="">Select</option>
+                                        <option>Auto</option>
+                                        <option>Manual</option>
+                                    </select></div>
+                            </div>
+                            <div class="form-row form-row-3">
+                                <div class="form-group"><label class="form-label" for="course-job-available">Job
+                                        Available</label><select id="course-job-available" class="form-input">
+                                        <option value="">Select</option>
+                                        <option>Yes</option>
+                                        <option>No</option>
+                                    </select></div>
+                                <div class="form-group"><label class="form-label" for="course-job-country">Job
+                                        Country</label><input type="text" id="course-job-country" class="form-input">
+                                </div>
+                                <div class="form-group"><label class="form-label" for="course-job-salary">Job
+                                        Salary</label><input type="text" id="course-job-salary" class="form-input">
+                                </div>
+                            </div>
+                            <div class="form-row form-row-3">
+                                <div class="form-group"><label class="form-label" for="course-job-mode">Job
+                                        Mode</label><select id="course-job-mode" class="form-input">
+                                        <option value="">Select</option>
+                                        <option>Remote</option>
+                                        <option>On-site</option>
+                                        <option>Hybrid</option>
+                                    </select></div>
+                                <div class="form-group"><label class="form-label"
+                                        for="course-language">Language</label><input type="text" id="course-language"
+                                        class="form-input" value="English"></div>
+                                <div class="form-group"></div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="course-extra-fields">Extra Fields (JSON)</label>
+                                <textarea id="course-extra-fields" class="form-input form-textarea" rows="3"
+                                    placeholder='{"key":"value"}'></textarea>
+                                <div id="json-feedback" class="json-feedback"></div>
+                            </div>
+                            <span id="course-field-status" class="course-field-status"></span>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Save Course</button>
+                                <button type="button" id="fetch-meta-btn" class="btn btn-ghost">Fetch Metadata</button>
+                                <button type="button" id="ai-classify-btn" class="btn btn-ghost">AI Classify</button>
+                                <button type="button" id="verify-course-btn" class="btn btn-ghost hidden">Mark
+                                    Verified</button>
+                                <button type="button" id="archive-course-btn"
+                                    class="btn btn-danger hidden">Archive</button>
+                            </div>
+                        </form>
                     </div>
-                    <div class="form-actions-bar">
-                        <button type="submit" class="btn btn-primary">Save Course</button>
-                        <button type="button" id="archive-course-btn" class="btn btn-danger hidden">Archive</button>
-                        <button type="button" id="verify-course-btn" class="btn hidden">Mark Verified</button>
+                </div>
+            </section>
+
+            <!-- SUGGESTIONS TAB -->
+            <section class="admin-tab-panel" id="tab-suggestions">
+                <div class="admin-panel-header">
+                    <h2 class="admin-panel-title">Suggestion Queue</h2>
+                </div>
+                <div class="admin-suggestions-list" id="admin-suggestions-list"></div>
+            </section>
+
+            <!-- BULK TAB -->
+            <section class="admin-tab-panel" id="tab-bulk">
+                <div class="admin-panel-header">
+                    <h2 class="admin-panel-title">Import & Export</h2>
+                </div>
+                <div class="bulk-grid">
+                    <div class="bulk-card">
+                        <h3 class="bulk-card-title">Import Courses</h3>
+                        <div class="file-drop-zone" id="file-drop-zone" role="button" tabindex="0"
+                            aria-label="Drop or click to upload file">
+                            <div class="drop-icon">CSV / JSON</div>
+                            <p>Drop file here or click to browse</p>
+                        </div>
+                        <input type="file" id="file-input" accept=".csv,.json" style="display:none">
+                        <div id="import-preview"></div>
+                        <div id="import-summary"></div>
+                        <button type="button" id="import-btn" class="btn btn-primary hidden">Import Valid Rows</button>
                     </div>
-                </form>
-            </div>
-
-            <!-- BULK -->
-            <div id="tab-bulk" class="admin-tab-panel">
-                <h2 class="admin-page-title">Bulk Operations</h2>
-                <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:400;margin-bottom:0.75rem">
-                    Import</h3>
-                <div id="file-drop-zone" class="file-drop-zone">
-                    <p>Drop CSV or JSON here, or click to browse</p>
-                    <p class="file-types">.csv (title, link, ...) or .json (array)</p>
-                    <input type="file" id="file-input" accept=".csv,.json" style="display:none">
+                    <div class="bulk-card">
+                        <h3 class="bulk-card-title">Export Courses</h3>
+                        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1rem">Download all active
+                            courses as CSV or JSON.</p>
+                        <button type="button" id="export-csv-btn" class="btn btn-ghost btn-block">Export CSV</button>
+                        <button type="button" id="export-json-btn" class="btn btn-ghost btn-block"
+                            style="margin-top:0.5rem">Export JSON</button>
+                    </div>
                 </div>
-                <div id="import-preview" class="import-preview"></div>
-                <div id="import-summary" class="import-summary"></div>
-                <button type="button" id="import-btn" class="btn btn-primary mt-2 hidden">Import Valid Rows</button>
-                <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:400;margin:1.5rem 0 0.75rem">
-                    Export</h3>
-                <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-                    <button type="button" id="export-csv-btn" class="btn btn-secondary">Export CSV</button>
-                    <button type="button" id="export-json-btn" class="btn btn-secondary">Export JSON</button>
+            </section>
+
+            <!-- RATINGS TAB -->
+            <section class="admin-tab-panel" id="tab-ratings">
+                <div class="admin-panel-header">
+                    <h2 class="admin-panel-title">Course Ratings</h2>
                 </div>
-            </div>
-
-            <!-- SUGGESTIONS -->
-            <div id="tab-suggestions" class="admin-tab-panel">
-                <h2 class="admin-page-title">Suggestions</h2>
-                <div id="admin-suggestions-list"></div>
-            </div>
-
-            <!-- RATINGS -->
-            <div id="tab-ratings" class="admin-tab-panel">
-                <h2 class="admin-page-title">Ratings</h2>
                 <div id="ratings-container"></div>
-            </div>
+            </section>
 
-            <!-- LOGS -->
-            <div id="tab-logs" class="admin-tab-panel">
-                <h2 class="admin-page-title">Activity Log</h2>
-                <div class="log-filter-bar">
-                    <div class="filter-group"><label class="filter-label" for="log-filter-action">Action</label><select
-                            id="log-filter-action" class="filter-select">
-                            <option value="">All</option>
-                            <option value="search">Search</option>
-                            <option value="course_click">Click</option>
-                            <option value="suggestion">Suggestion</option>
-                            <option value="rating">Rating</option>
-                            <option value="page_visit">Visit</option>
-                        </select></div>
-                    <div class="filter-group"><label class="filter-label" for="log-filter-from">From</label><input
-                            type="date" id="log-filter-from" class="form-input"
-                            style="padding:0.4rem;font-size:0.75rem"></div>
-                    <div class="filter-group"><label class="filter-label" for="log-filter-device">Device</label><select
-                            id="log-filter-device" class="filter-select">
-                            <option value="">All</option>
-                            <option value="Desktop">Desktop</option>
-                            <option value="Mobile">Mobile</option>
-                        </select></div>
-                    <button type="button" id="log-apply-filter" class="btn btn-secondary btn-sm">Apply</button>
-                    <button type="button" id="log-export-btn" class="btn btn-secondary btn-sm">Export CSV</button>
+            <!-- LOGS TAB -->
+            <section class="admin-tab-panel" id="tab-logs">
+                <div class="admin-panel-header">
+                    <h2 class="admin-panel-title">Activity Log</h2>
                 </div>
-                <div class="log-table-wrapper">
+                <div class="log-filters">
+                    <select id="log-filter-action" class="form-input">
+                        <option value="">All actions</option>
+                        <option value="page_visit">Page Visit</option>
+                        <option value="search">Search</option>
+                        <option value="course_click">Course Click</option>
+                        <option value="filter_used">Filter Used</option>
+                        <option value="sort_used">Sort Used</option>
+                        <option value="suggestion">Suggestion</option>
+                        <option value="rating">Rating</option>
+                    </select>
+                    <input type="date" id="log-filter-from" class="form-input">
+                    <select id="log-filter-device" class="form-input">
+                        <option value="">All devices</option>
+                        <option value="mobile">Mobile</option>
+                        <option value="tablet">Tablet</option>
+                        <option value="desktop">Desktop</option>
+                    </select>
+                    <button type="button" id="log-apply-filter" class="btn btn-primary btn-sm">Apply</button>
+                    <button type="button" id="log-export-btn" class="btn btn-ghost btn-sm">Export CSV</button>
+                </div>
+                <div class="table-wrapper">
                     <table class="log-table">
                         <thead>
                             <tr>
@@ -277,25 +364,22 @@
                         <tbody id="log-table-body"></tbody>
                     </table>
                 </div>
-            </div>
+            </section>
 
-            <!-- ANALYTICS -->
-            <div id="tab-analytics" class="admin-tab-panel">
-                <h2 class="admin-page-title">Analytics</h2>
+            <!-- ANALYTICS TAB -->
+            <section class="admin-tab-panel" id="tab-analytics">
+                <div class="admin-panel-header">
+                    <h2 class="admin-panel-title">Analytics Overview</h2>
+                </div>
                 <div id="analytics-container"></div>
-            </div>
+            </section>
 
         </main>
     </div>
 
-    <div id="admin-modal" class="modal-overlay">
-        <div class="modal">
-            <h3 id="modal-title"></h3>
-            <div id="modal-body"></div>
-            <div id="modal-actions" class="modal-actions"></div>
-        </div>
-    </div>
-    <div id="admin-toast-container" class="toast-container" aria-live="polite"></div>
+    <!-- TOASTS -->
+    <div class="toast-container" id="admin-toast-container" aria-live="polite"></div>
+
     <script src="js/admin.js"></script>
 </body>
 
