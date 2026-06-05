@@ -6,7 +6,7 @@
     'use strict';
 
     // ---- Configuration ----
-    const SUPABASE_URL = 'https://kvxfxpqbnmplcuadjmpc.supabase.co/';
+    const SUPABASE_URL = 'https://kvxfxpqbnmplcuadjmpc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2eGZ4cHFibm1wbGN1YWRqbXBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDk2NjUsImV4cCI6MjA5NjIyNTY2NX0.GQ5glAUeNb_6wMS9OvGBu25WPFa1yDs_hquGfYLXS-c';
     const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;
     const REST_BASE = `${SUPABASE_URL}/rest/v1`;
