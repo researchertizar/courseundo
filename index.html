@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CourseUndo - Semantic Course Discovery</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <h1 class="logo">CourseUndo</h1>
+                <ul class="nav-links">
+                    <li><a href="#search">Search</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="admin.html">Admin</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="search" class="search-section">
+            <h2>Find Your Course Match</h2>
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    class="search-input" 
+                    placeholder="Describe what you want to learn..."
+                >
+                <button id="searchButton" class="btn btn-primary">Search</button>
+            </div>
+            <div id="results" class="results-container"></div>
+        </section>
+
+        <section id="about" class="about-section">
+            <h2>About CourseUndo</h2>
+            <p>
+                CourseUndo uses advanced semantic search and AI classification to help you find 
+                the perfect courses based on your learning goals.
+            </p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 CourseUndo. All rights reserved.</p>
+    </footer>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

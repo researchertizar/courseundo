@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CourseUndo - Admin Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <h1 class="logo">CourseUndo Admin</h1>
+                <ul class="nav-links">
+                    <li><a href="index.html">Back to Site</a></li>
+                    <li><a href="#" id="logoutBtn">Logout</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main class="admin-main">
+        <aside class="admin-sidebar">
+            <ul class="admin-menu">
+                <li><a href="#dashboard" class="menu-item active">Dashboard</a></li>
+                <li><a href="#courses" class="menu-item">Courses</a></li>
+                <li><a href="#functions" class="menu-item">Functions</a></li>
+                <li><a href="#logs" class="menu-item">Logs</a></li>
+                <li><a href="#settings" class="menu-item">Settings</a></li>
+            </ul>
+        </aside>
+
+        <section class="admin-content">
+            <div id="dashboard" class="content-section active">
+                <h2>Dashboard</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Courses</h3>
+                        <p id="totalCourses">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Users</h3>
+                        <p id="totalUsers">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Searches Today</h3>
+                        <p id="searchesToday">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="courses" class="content-section">
+                <h2>Manage Courses</h2>
+                <button class="btn btn-primary" id="addCourseBtn">Add Course</button>
+                <div id="coursesList" class="table-container"></div>
+            </div>
+
+            <div id="functions" class="content-section">
+                <h2>Cloud Functions</h2>
+                <div id="functionsList" class="function-list"></div>
+            </div>
+
+            <div id="logs" class="content-section">
+                <h2>Activity Logs</h2>
+                <div id="logsList" class="logs-container"></div>
+            </div>
+
+            <div id="settings" class="content-section">
+                <h2>Settings</h2>
+                <form id="settingsForm">
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="password" id="apiKey" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 CourseUndo Admin. All rights reserved.</p>
+    </footer>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>
