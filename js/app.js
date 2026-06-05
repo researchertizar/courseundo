@@ -1,89 +1,132 @@
 (function () {
     'use strict';
 
-    // ===== CONFIG =====
-    var SUPABASE_URL = 'https://kvxfxpqbnmplcuadjmpc.supabase.co'.replace(/\/+$/, '');
-    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2eGZ4cHFibm1wbGN1YWRqbXBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDk2NjUsImV4cCI6MjA5NjIyNTY2NX0.GQ5glAUeNb_6wMS9OvGBu25WPFa1yDs_hquGfYLXS-c';
-    var FN = SUPABASE_URL + '/functions/v1';
-    var REST = SUPABASE_URL + '/rest/v1';
-    var PER_PAGE = 20;
+    /* ===== CONFIG — replace with your actual values ===== */
+    var CFG_URL = 'https://kvxfxpqbnmplcuadjmpc.supabase.co';
+    var CFG_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2eGZ4cHFibm1wbGN1YWRqbXBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDk2NjUsImV4cCI6MjA5NjIyNTY2NX0.GQ5glAUeNb_6wMS9OvGBu25WPFa1yDs_hquGfYLXS-c';
 
-    // ===== STATE =====
+    CFG_URL = CFG_URL.replace(/\/+/, '');
+    var FN = CFG_URL + '/functions/v1';
+    var REST = CFG_URL + '/rest/v1';
+    var PER = 20;
+
+    /* ===== SAFE DOM HELPERS ===== */
+    function gid(id) { return document.getElementById(id); }
+    function qsa(sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+    function on(el, ev, fn) { if (el) el.addEventListener(ev, fn); }
+    function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function escA(s) { return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function fmtD(d) { if (!d) return ''; try { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { return d; } }
+
+    /* ===== STATE ===== */
     var S = {
         courses: [], suggestions: [], total: 0, page: 1, tab: 'courses',
-        query: '', searchType: 'keyword',
-        filters: { platform: '', category: '', 'job-available': '', difficulty: '', cost: '', certification: '' },
-        sort: localStorage.getItem('cu_sort') || 'relevance',
-        sid: ''
+        query: '', stype: 'keyword',
+        filt: { platform: '', category: '', 'job-available': '', difficulty: '', cost: '', certification: '' },
+        sort: 'relevance', sid: ''
     };
 
-    // ===== DOM =====
-    var $ = function (id) { return document.getElementById(id); };
-    var $$ = function (sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); };
-    var D = {};
+    /* ===== DOM REFS (populated after DOMContentLoaded) ===== */
+    var searchInput, searchBtn, searchMode, clearBtn, resultCount, sortSel, grid;
+    var sugList, sugForm, pagEl, toasts;
+    var rateOvl, rateStars, rateFb, rateTitle;
+    var courseCountEl;
+    var sugTitle, sugLink, sugPlatform, sugName, sugEmail, sugNotes, hpField, dupWarn;
+    var tabBtns, tabPanels;
+    var filtEls = {};
 
-    function cache() {
-        D.searchInput = ('search-input'); D.searchBtn = $('search-btn'); D.searchMode = $('search-mode');
-        D.clearFilters = $('clear-filters'); D.resultsCount = $('results-count');
-        D.sortSelect = $('sort-select'); D.grid = $('courses-grid');
-        D.sugList = $('suggestions-list'); D.sugForm = $('suggest-form');
-        D.pagination = $('pagination'); D.toasts = $('toast-container');
-        D.rateOverlay = $('rating-overlay'); D.rateStars = $('rating-stars');
-        D.rateFeedback = $('rating-feedback'); D.rateTitle = $('rating-course-title');
-        D.courseCount = $('header-course-count');
-        D.sugTitle = $('sug-title'); D.sugLink = $('sug-link'); D.sugPlatform = $('sug-platform');
-        D.sugName = $('sug-name'); D.sugEmail = $('sug-email'); D.sugNotes = $('sug-notes');
-        D.hp = $('sug-website'); D.dupWarn = $('duplicate-warning');
-        D.tabBtns = $$$$('.tab-btn'); D.tabPanels = $$('.tab-panel');
-        D.filt = {};
-        ['platform', 'category', 'job-available', 'difficulty', 'cost', 'certification'].forEach(function (k) {
-            D.filt[k] = ('filter-' + k);
-        });
+    function cacheDom() {
+        searchInput = gid('search-input');
+        searchBtn = gid('search-btn');
+        searchMode = gid('search-mode');
+        clearBtn = gid('clear-filters');
+        resultCount = gid('results-count');
+        sortSel = gid('sort-select');
+        grid = gid('courses-grid');
+        sugList = gid('suggestions-list');
+        sugForm = gid('suggest-form');
+        pagEl = gid('pagination');
+        toasts = gid('toast-container');
+        rateOvl = gid('rating-overlay');
+        rateStars = gid('rating-stars');
+        rateFb = gid('rating-feedback');
+        rateTitle = gid('rating-course-title');
+        courseCountEl = gid('header-course-count');
+        sugTitle = gid('sug-title');
+        sugLink = gid('sug-link');
+        sugPlatform = gid('sug-platform');
+        sugName = gid('sug-name');
+        sugEmail = gid('sug-email');
+        sugNotes = gid('sug-notes');
+        hpField = gid('sug-website');
+        dupWarn = gid('duplicate-warning');
+        tabBtns = qsa('.tab-btn');
+        tabPanels = qsa('.tab-panel');
+
+        var fids = ['platform', 'category', 'job-available', 'difficulty', 'cost', 'certification'];
+        for (var i = 0; i < fids.length; i++) {
+            filtEls[fids[i]] = gid('filter-' + fids[i]);
+        }
     }
 
-    // ===== INIT =====
+    /* ===== INIT ===== */
     document.addEventListener('DOMContentLoaded', function () {
-        cache();
+        cacheDom();
         var sid = sessionStorage.getItem('cu_sid');
-        if (!sid) { sid = 's_' + Math.random().toString(36).substr(2, 9); sessionStorage.setItem('cu_sid', sid); }
+        if (!sid) { sid = 's' + Math.random().toString(36).substr(2, 9); sessionStorage.setItem('cu_sid', sid); }
         S.sid = sid;
-        if (D.sortSelect) D.sortSelect.value = S.sort;
-        bind();
+        var saved = localStorage.getItem('cu_sort');
+        if (saved) { S.sort = saved; if (sortSel) sortSel.value = saved; }
+        bindEvents();
         loadCourses();
         loadStats();
-        log('page_visit', { page: 'home' });
+        logAct('page_visit', { page: 'home' });
     });
 
-    // ===== EVENTS =====
-    function bind() {
-        on(D.searchInput, 'keydown', function (e) { if (e.key === 'Enter') search(); });
-        on(D.searchBtn, 'click', search);
-        on(D.clearFilters, 'click', clearFilters);
-        on(D.sortSelect, 'change', function () { S.sort = D.sortSelect.value; localStorage.setItem('cu_sort', S.sort); S.page = 1; loadCourses(); log('sort_used', { sort: S.sort }); });
-
-        Object.keys(D.filt).forEach(function (k) {
-            on(D.filt[k], 'change', function () {
-                S.filters[k] = D.filt[k].value;
-                D.filt[k].classList.toggle('has-value', !!D.filt[k].value);
-                S.page = 1;
-                loadCourses();
-                if (D.filt[k].value) log('filter_used', { filter: k, value: D.filt[k].value });
-            });
+    /* ===== EVENT BINDING ===== */
+    function bindEvents() {
+        on(searchInput, 'keydown', function (e) { if (e.key === 'Enter') doSearch(); });
+        on(searchBtn, 'click', doSearch);
+        on(clearBtn, 'click', clearFilters);
+        on(sortSel, 'change', function () {
+            S.sort = sortSel.value;
+            localStorage.setItem('cu_sort', S.sort);
+            S.page = 1;
+            loadCourses();
+            logAct('sort_used', { sort: S.sort });
         });
 
-        D.tabBtns.forEach(function (b) { on(b, 'click', function () { switchTab(b.getAttribute('data-tab')); }); });
-        on(D.sugForm, 'submit', submitSuggestion);
-        on(D.sugLink, 'blur', checkDup);
-        on(D.rateOverlay, 'click', function (e) { if (e.target === D.rateOverlay) closeRate(); });
-        on(D.rateStars, 'mouseover', rateHover);
-        on(D.rateStars, 'mouseout', rateHoverOut);
-        on(D.rateStars, 'click', rateClick);
+        var fkeys = Object.keys(filtEls);
+        for (var i = 0; i < fkeys.length; i++) {
+            (function (k) {
+                on(filtEls[k], 'change', function () {
+                    S.filt[k] = filtEls[k].value;
+                    if (filtEls[k].value) filtEls[k].classList.add('has-value');
+                    else filtEls[k].classList.remove('has-value');
+                    S.page = 1;
+                    loadCourses();
+                    if (filtEls[k].value) logAct('filter_used', { filter: k, value: filtEls[k].value });
+                });
+            })(fkeys[i]);
+        }
+
+        for (var t = 0; t < tabBtns.length; t++) {
+            (function (btn) {
+                on(btn, 'click', function () { switchTab(btn.getAttribute('data-tab')); });
+            })(tabBtns[t]);
+        }
+
+        on(sugForm, 'submit', submitSug);
+        on(sugLink, 'blur', checkDup);
+        on(rateOvl, 'click', function (e) { if (e.target === rateOvl) closeRate(); });
+        on(rateStars, 'mouseover', rateHover);
+        on(rateStars, 'mouseout', rateHoverOut);
+        on(rateStars, 'click', rateClick);
     }
 
-    function on(el, ev, fn) { if (el) el.addEventListener(ev, fn); }
-
-    // ===== API =====
-    function get(ep, params) {
+    /* ===== API ===== */
+    function apiGet(ep, params) {
+        params = params || {};
         var url = REST + '/' + ep;
         var first = true;
         for (var k in params) {
@@ -91,77 +134,85 @@
             url += (first ? '?' : '&') + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
             first = false;
         }
-        return fetch(url, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY } })
-            .then(function (r) {
-                var cr = r.headers.get('Content-Range');
-                return r.json().then(function (d) {
-                    if (!r.ok) throw new Error(d.message || 'Error ' + r.status);
-                    var t = Array.isArray(d) ? d.length : 0;
-                    if (cr) { var p = cr.split('/'); if (p[1] && p[1] !== '*') t = parseInt(p[1], 10); }
-                    return { data: d, total: t };
-                });
+        return fetch(url, {
+            headers: { 'apikey': CFG_KEY, 'Authorization': 'Bearer ' + CFG_KEY }
+        }).then(function (r) {
+            var cr = r.headers.get('Content-Range');
+            return r.json().then(function (d) {
+                if (!r.ok) throw new Error(d.message || 'Error ' + r.status);
+                var t = Array.isArray(d) ? d.length : 0;
+                if (cr) { var p = cr.split('/'); if (p[1] && p[1] !== '*') t = parseInt(p[1], 10); }
+                return { data: d, total: t };
             });
+        });
     }
 
-    function post(ep, body, isFn) {
+    function apiPost(ep, body, isFn) {
         var url = isFn ? FN + '/' + ep : REST + '/' + ep;
-        var h = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+        var h = { 'apikey': CFG_KEY, 'Authorization': 'Bearer ' + CFG_KEY, 'Content-Type': 'application/json' };
         if (!isFn) h['Prefer'] = 'return=representation';
         return fetch(url, { method: 'POST', headers: h, body: JSON.stringify(body) })
             .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.message || 'Error ' + r.status); return d; }); });
     }
 
-    // ===== COURSES =====
+    /* ===== COURSE LOADING ===== */
     function loadCourses() {
         showLoading();
         var q = S.query.trim();
         var p;
-        if (q.length > 0 && S.searchType === 'semantic') p = loadSemantic(q);
+        if (q.length > 0 && S.stype === 'semantic') p = loadSemantic(q);
         else if (q.length > 0) p = loadKeyword(q);
         else p = loadBrowse();
 
         p.then(function (res) {
-            S.courses = res.results; S.total = res.total;
-            renderCourses(); renderPages(); updateCount();
-            if (q) log('search', { query: q, count: res.total, type: S.searchType });
+            S.courses = res.results;
+            S.total = res.total;
+            renderCourses();
+            renderPages();
+            updateCount();
+            if (q) logAct('search', { query: q, count: res.total, type: S.stype });
         }).catch(function (err) {
-            if (D.grid) D.grid.innerHTML = '<div class="empty-state"><h3>Error</h3><p>' + esc(err.message) + '</p></div>';
+            if (grid) grid.innerHTML = '<div class="empty-state"><h3>Error</h3><p>' + esc(err.message) + '</p></div>';
         });
     }
 
     function loadBrowse() {
-        var pr = { status: 'eq.active', limit: PER_PAGE, offset: (S.page - 1) * PER_PAGE };
-        addFilters(pr); addSort(pr);
-        return get('courses', pr).then(function (r) { return { results: r.data, total: r.total }; });
+        var pr = { status: 'eq.active', limit: PER, offset: (S.page - 1) * PER };
+        addFilt(pr); addSort(pr);
+        return apiGet('courses', pr).then(function (r) { return { results: r.data, total: r.total }; });
     }
 
     function loadKeyword(q) {
-        var pr = { status: 'eq.active', or: '(title.ilike.*' + q + '*,platform.ilike.*' + q + '*,institution.ilike.*' + q + '*,instructor.ilike.*' + q + '*)', limit: PER_PAGE, offset: (S.page - 1) * PER_PAGE };
-        addFilters(pr); addSort(pr);
-        return get('courses', pr).then(function (r) { return { results: r.data, total: r.total }; });
+        var or = '(title.ilike.*' + q + '*,platform.ilike.*' + q + '*,institution.ilike.*' + q + '*,instructor.ilike.*' + q + '*)';
+        var pr = { status: 'eq.active', 'or': or, limit: PER, offset: (S.page - 1) * PER };
+        addFilt(pr); addSort(pr);
+        return apiGet('courses', pr).then(function (r) { return { results: r.data, total: r.total }; });
     }
 
     function loadSemantic(q) {
-        return post('semantic-search', { query: q, limit: 100 }, true).then(function (d) {
-            if (d.fallback) { S.searchType = 'keyword'; updateMode(); return loadKeyword(q); }
-            var res = clientFilter(d.results || []);
+        return apiPost('semantic-search', { query: q, limit: 100 }, true).then(function (d) {
+            if (d.fallback) { S.stype = 'keyword'; updMode(); return loadKeyword(q); }
+            var res = clientFilt(d.results || []);
             res = clientSort(res);
             var tot = res.length;
-            res = res.slice((S.page - 1) * PER_PAGE, S.page * PER_PAGE);
+            res = res.slice((S.page - 1) * PER, S.page * PER);
             return { results: res, total: tot };
-        }).catch(function () { S.searchType = 'keyword'; updateMode(); return loadKeyword(q); });
+        }).catch(function () { S.stype = 'keyword'; updMode(); return loadKeyword(q); });
     }
 
-    function addFilters(pr) {
-        for (var k in S.filters) { if (S.filters[k]) pr[k] = 'eq.' + S.filters[k]; }
+    function addFilt(pr) {
+        for (var k in S.filt) { if (S.filt[k]) pr[k] = 'eq.' + S.filt[k]; }
     }
     function addSort(pr) {
-        var m = { relevance: 'rating_avg.desc', 'rating-high': 'rating_avg.desc', 'rating-low': 'rating_avg.asc', newest: 'created_at.desc', oldest: 'created_at.asc', 'alpha-az': 'title.asc', 'alpha-za': 'title.desc', 'cost-free': 'cost.asc' };
+        var m = {
+            relevance: 'rating_avg.desc', 'rating-high': 'rating_avg.desc', 'rating-low': 'rating_avg.asc',
+            newest: 'created_at.desc', oldest: 'created_at.asc', 'alpha-az': 'title.asc', 'alpha-za': 'title.desc', 'cost-free': 'cost.asc'
+        };
         pr.order = m[S.sort] || 'rating_avg.desc';
     }
-    function clientFilter(arr) {
+    function clientFilt(arr) {
         return arr.filter(function (c) {
-            for (var k in S.filters) { if (S.filters[k] && (c[k] || '').toLowerCase() !== S.filters[k].toLowerCase()) return false; }
+            for (var k in S.filt) { if (S.filt[k] && (c[k] || '').toLowerCase() !== S.filt[k].toLowerCase()) return false; }
             return true;
         });
     }
@@ -180,48 +231,68 @@
         return a;
     }
 
-    // ===== RENDER COURSES =====
+    /* ===== RENDER COURSES ===== */
     function renderCourses() {
-        if (!D.grid) return;
-        if (!S.courses.length) { D.grid.innerHTML = '<div class="empty-state"><h3>No courses found</h3><p>Try adjusting your search.</p></div>'; return; }
+        if (!grid) return;
+        if (!S.courses.length) {
+            grid.innerHTML = '<div class="empty-state"><h3>No courses found</h3><p>Try adjusting your search or filters.</p></div>';
+            return;
+        }
         var h = '';
-        S.courses.forEach(function (c, i) {
-            var pCls = platCls(c.platform);
-            h += '<article class="course-card" style="animation-delay:' + (i * 0.04).toFixed(2) + 's" data-id="' + c.id + '">' +
+        for (var i = 0; i < S.courses.length; i++) {
+            var c = S.courses[i];
+            var pc = platC(c.platform);
+            var bd = badges(c);
+            var mt = meta(c);
+            var st = starH(c.rating_avg || 0);
+            var fr = freshH(c.last_verified);
+            h += '<article class="course-card" style="animation-delay:' + (i * 0.04).toFixed(2) + 's">' +
                 '<div class="card-header">' +
-                '<h3 class="card-title"><a href="' + escA(c.link) + '" target="_blank" rel="noopener" data-cid="' + c.id + '" data-ct="' + escA(c.title) + '" data-cp="' + escA(c.platform || '') + '" class="clink">' + esc(c.title) + '</a></h3>' +
-                (c.platform ? '<span class="card-platform ' + pCls + '">' + esc(c.platform) + '</span>' : '') +
+                '<h3 class="card-title"><a href="' + escA(c.link) + '" target="_blank" rel="noopener" class="clink" data-id="' + c.id + '" data-t="' + escA(c.title) + '" data-p="' + escA(c.platform || '') + '">' + esc(c.title) + '</a></h3>' +
+                (c.platform ? '<span class="card-platform ' + pc + '">' + esc(c.platform) + '</span>' : '') +
                 '</div>' +
-                badges(c) +
-                meta(c) +
+                (bd ? '<div class="card-badges">' + bd + '</div>' : '') +
+                (mt ? '<div class="card-meta">' + mt + '</div>' : '') +
                 '<div class="card-rating">' +
-                '<div class="stars cstars" data-cid="' + c.id + '" data-ct="' + escA(c.title) + '" role="button" tabindex="0" aria-label="Rate">' + stars(c.rating_avg || 0) + '</div>' +
+                '<div class="stars cstars" data-id="' + c.id + '" data-t="' + escA(c.title) + '" role="button" tabindex="0" aria-label="Rate this course">' + st + '</div>' +
                 '<span class="rating-text">' + (c.rating_avg || 0).toFixed(1) + ' <span class="count">(' + (c.rating_count || 0) + ')</span></span>' +
-                freshness(c.last_verified) +
+                fr +
                 '</div>' +
                 '</article>';
-        });
-        D.grid.innerHTML = h;
+        }
+        grid.innerHTML = h;
 
-        $$$$('.clink').forEach(function (a) { on(a, 'click', function () { log('course_click', { id: a.getAttribute('data-cid'), title: a.getAttribute('data-ct'), platform: a.getAttribute('data-cp') }); }); });
-        $$('.cstars').forEach(function (el) {
-            on(el, 'click', function () { openRate(el.getAttribute('data-cid'), el.getAttribute('data-ct')); });
-            on(el, 'keydown', function (e) { if (e.key === 'Enter') openRate(el.getAttribute('data-cid'), el.getAttribute('data-ct')); });
-        });
+        var links = qsa('.clink');
+        for (var li = 0; li < links.length; li++) {
+            (function (a) {
+                on(a, 'click', function () {
+                    logAct('course_click', { id: a.getAttribute('data-id'), title: a.getAttribute('data-t'), platform: a.getAttribute('data-p') });
+                });
+            })(links[li]);
+        }
+
+        var stars = qsa('.cstars');
+        for (var si = 0; si < stars.length; si++) {
+            (function (el) {
+                on(el, 'click', function () { openRate(el.getAttribute('data-id'), el.getAttribute('data-t')); });
+                on(el, 'keydown', function (e) { if (e.key === 'Enter') openRate(el.getAttribute('data-id'), el.getAttribute('data-t')); });
+            })(stars[si]);
+        }
     }
 
-    function platCls(p) {
+    function platC(p) {
         if (!p) return 'platform-other';
         p = p.toLowerCase();
-        if (p.indexOf('coursera') !== -1) return 'platform-coursera';
-        if (p.indexOf('edx') !== -1) return 'platform-edx';
-        if (p.indexOf('udemy') !== -1) return 'platform-udemy';
-        if (p.indexOf('khan') !== -1) return 'platform-khan';
-        if (p.indexOf('udacity') !== -1) return 'platform-udacity';
-        if (p.indexOf('futurelearn') !== -1) return 'platform-futurelearn';
-        if (p.indexOf('linkedin') !== -1) return 'platform-linkedin';
+        if (p.indexOf('coursera') >= 0) return 'platform-coursera';
+        if (p.indexOf('edx') >= 0) return 'platform-edx';
+        if (p.indexOf('udemy') >= 0) return 'platform-udemy';
+        if (p.indexOf('khan') >= 0) return 'platform-khan';
+        if (p.indexOf('udacity') >= 0) return 'platform-udacity';
+        if (p.indexOf('futurelearn') >= 0) return 'platform-futurelearn';
+        if (p.indexOf('linkedin') >= 0) return 'platform-linkedin';
         return 'platform-other';
     }
+
     function badges(c) {
         var b = '';
         if (c.category) b += '<span class="badge badge-category">' + esc(c.category) + '</span>';
@@ -229,21 +300,25 @@
         if (c.cost) b += '<span class="badge badge-cost-' + c.cost.toLowerCase() + '">' + esc(c.cost) + '</span>';
         if (c.certification === 'Yes') b += '<span class="badge badge-cert">Certificate</span>';
         if (c.job_available === 'Yes') b += '<span class="badge badge-job">Jobs</span>';
-        return b ? '<div class="card-badges">' + b + '</div>' : '';
+        return b;
     }
+
     function meta(c) {
         var m = '';
         if (c.institution) m += '<span class="card-meta-item">' + esc(c.institution) + '</span>';
         if (c.instructor) m += '<span class="card-meta-item">' + esc(c.instructor) + '</span>';
         if (c.duration) m += '<span class="card-meta-item">' + esc(c.duration) + '</span>';
-        return m ? '<div class="card-meta">' + m + '</div>' : '';
+        if (c.language) m += '<span class="card-meta-item">' + esc(c.language) + '</span>';
+        return m;
     }
-    function stars(r) {
+
+    function starH(r) {
         var h = '', n = Math.round(r);
         for (var i = 1; i <= 5; i++) h += '<span class="star' + (i > n ? ' empty' : '') + '">&#9733;</span>';
         return h;
     }
-    function freshness(d) {
+
+    function freshH(d) {
         if (!d) return '<span class="freshness freshness-red">Not verified</span>';
         var days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
         if (days < 7) return '<span class="freshness freshness-green">Checked ' + days + 'd ago</span>';
@@ -251,163 +326,199 @@
         return '<span class="freshness freshness-red">Checked ' + days + 'd ago</span>';
     }
 
-    // ===== PAGINATION =====
+    /* ===== PAGINATION ===== */
     function renderPages() {
-        if (!D.pagination) return;
-        var tp = Math.ceil(S.total / PER_PAGE);
-        if (tp <= 1) { D.pagination.innerHTML = ''; return; }
+        if (!pagEl) return;
+        var tp = Math.ceil(S.total / PER);
+        if (tp <= 1) { pagEl.innerHTML = ''; return; }
         var h = '<button class="page-btn" data-p="' + (S.page - 1) + '"' + (S.page <= 1 ? ' disabled' : '') + '>&laquo;</button>';
         for (var i = 1; i <= tp; i++) {
-            if (tp > 7 && i > 2 && i < tp - 1 && Math.abs(i - S.page) > 1) { if (i === 3 || i === tp - 2) h += '<span class="page-btn" style="border:none;cursor:default">...</span>'; continue; }
+            if (tp > 7 && i > 2 && i < tp - 1 && Math.abs(i - S.page) > 1) {
+                if (i === 3 || i === tp - 2) h += '<span class="page-btn" style="border:none;cursor:default">...</span>';
+                continue;
+            }
             h += '<button class="page-btn' + (i === S.page ? ' active' : '') + '" data-p="' + i + '">' + i + '</button>';
         }
         h += '<button class="page-btn" data-p="' + (S.page + 1) + '"' + (S.page >= tp ? ' disabled' : '') + '>&raquo;</button>';
-        D.pagination.innerHTML = h;
-        $$('.page-btn[data-p]').forEach(function (b) {
-            on(b, 'click', function () {
-                var p = parseInt(b.getAttribute('data-p'), 10);
-                if (p >= 1 && p <= tp) { S.page = p; loadCourses(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-            });
-        });
-    }
-    function updateCount() { if (D.resultsCount) D.resultsCount.innerHTML = '<strong>' + S.total + '</strong> ' + (S.query ? 'results' : 'courses'); }
+        pagEl.innerHTML = h;
 
-    // ===== SEARCH =====
-    function search() {
-        S.query = (D.searchInput ? D.searchInput.value : '').trim();
+        var btns = qsa('.page-btn[data-p]');
+        for (var j = 0; j < btns.length; j++) {
+            (function (b) {
+                on(b, 'click', function () {
+                    var p = parseInt(b.getAttribute('data-p'), 10);
+                    if (p >= 1 && p <= tp) { S.page = p; loadCourses(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+                });
+            })(btns[j]);
+        }
+    }
+
+    function updateCount() {
+        if (resultCount) resultCount.innerHTML = '<strong>' + S.total + '</strong> ' + (S.query ? 'results' : 'courses');
+    }
+
+    /* ===== SEARCH ===== */
+    function doSearch() {
+        S.query = searchInput ? searchInput.value.trim() : '';
         S.page = 1;
-        S.searchType = S.query.length > 3 ? 'semantic' : 'keyword';
-        updateMode();
+        S.stype = S.query.length > 3 ? 'semantic' : 'keyword';
+        updMode();
         loadCourses();
     }
-    function updateMode() {
-        if (!D.searchMode) return;
-        D.searchMode.innerHTML = S.searchType === 'semantic'
+    function updMode() {
+        if (!searchMode) return;
+        searchMode.innerHTML = S.stype === 'semantic'
             ? '<span class="dot"></span> AI semantic search'
             : '<span class="dot" style="background:var(--text-muted)"></span> Keyword search';
     }
 
-    // ===== FILTERS =====
+    /* ===== FILTERS ===== */
     function clearFilters() {
-        for (var k in S.filters) { S.filters[k] = ''; if (D.filt[k]) { D.filt[k].value = ''; D.filt[k].classList.remove('has-value'); } }
-        S.page = 1; loadCourses();
+        var keys = Object.keys(S.filt);
+        for (var i = 0; i < keys.length; i++) {
+            S.filt[keys[i]] = '';
+            if (filtEls[keys[i]]) { filtEls[keys[i]].value = ''; filtEls[keys[i]].classList.remove('has-value'); }
+        }
+        S.page = 1;
+        loadCourses();
     }
 
-    // ===== TABS =====
+    /* ===== TABS ===== */
     function switchTab(id) {
         S.tab = id;
-        D.tabBtns.forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === id); });
-        D.tabPanels.forEach(function (p) { p.classList.toggle('active', p.id === 'panel-' + id); });
-        if (id === 'suggestions') loadSuggestions();
+        for (var i = 0; i < tabBtns.length; i++) {
+            tabBtns[i].classList.toggle('active', tabBtns[i].getAttribute('data-tab') === id);
+        }
+        for (var j = 0; j < tabPanels.length; j++) {
+            tabPanels[j].classList.toggle('active', tabPanels[j].id === 'panel-' + id);
+        }
+        if (id === 'suggestions') loadSugs();
     }
 
-    // ===== SUGGESTIONS =====
-    function loadSuggestions() {
-        get('suggestions', { status: 'eq.pending', order: 'created_at.desc' }).then(function (r) {
+    /* ===== SUGGESTIONS ===== */
+    function loadSugs() {
+        apiGet('suggestions', { status: 'eq.pending', order: 'created_at.desc' }).then(function (r) {
             S.suggestions = r.data;
-            if (!D.sugList) return;
-            if (!r.data.length) { D.sugList.innerHTML = '<div class="empty-state"><h3>No pending suggestions</h3></div>'; return; }
+            if (!sugList) return;
+            if (!r.data.length) { sugList.innerHTML = '<div class="empty-state"><h3>No pending suggestions</h3><p>Be the first to suggest a course!</p></div>'; return; }
             var h = '';
-            r.data.forEach(function (s, i) {
-                h += '<div class="suggestion-card" style="animation-delay:' + (i * 0.04) + 's">' +
-                    '<div class="flex-between"><h4 class="suggestion-title"><a href="' + escA(s.link) + '" target="_blank">' + esc(s.title) + '</a></h4><span class="badge badge-pending">Pending</span></div>' +
-                    '<div class="suggestion-meta">' + (s.platform ? '<span>' + esc(s.platform) + '</span>' : '') + (s.user_name ? '<span>By: ' + esc(s.user_name) + '</span>' : '') + '<span>' + fmtDate(s.created_at) + '</span></div>' +
+            for (var i = 0; i < r.data.length; i++) {
+                var s = r.data[i];
+                h += '<div class="suggestion-card" style="animation-delay:' + (i * 0.04).toFixed(2) + 's">' +
+                    '<div class="flex-between"><h4 class="suggestion-title"><a href="' + escA(s.link) + '" target="_blank" rel="noopener">' + esc(s.title) + '</a></h4><span class="badge badge-pending">Pending</span></div>' +
+                    '<div class="suggestion-meta">' + (s.platform ? '<span>' + esc(s.platform) + '</span>' : '') + (s.user_name ? '<span>By: ' + esc(s.user_name) + '</span>' : '') + '<span>' + fmtD(s.created_at) + '</span></div>' +
                     (s.notes ? '<p class="suggestion-notes">"' + esc(s.notes) + '"</p>' : '') + '</div>';
-            });
-            D.sugList.innerHTML = h;
+            }
+            sugList.innerHTML = h;
         }).catch(function () { });
     }
 
-    function submitSuggestion(e) {
+    function submitSug(e) {
         e.preventDefault();
-        if (D.hp && D.hp.value) return;
-        var title = D.sugTitle ? D.sugTitle.value.trim() : '';
-        var link = D.sugLink ? D.sugLink.value.trim() : '';
+        if (hpField && hpField.value) return;
+        var title = sugTitle ? sugTitle.value.trim() : '';
+        var link = sugLink ? sugLink.value.trim() : '';
         if (!title || title.length < 5) { toast('Title must be 5+ characters.', 'error'); return; }
         if (!link || !/^https?:\/\//.test(link)) { toast('Enter a valid URL.', 'error'); return; }
         var body = { title: title, link: link };
-        var plat = D.sugPlatform ? D.sugPlatform.value.trim() : '';
-        var name = D.sugName ? D.sugName.value.trim() : '';
-        var email = D.sugEmail ? D.sugEmail.value.trim() : '';
-        var notes = D.sugNotes ? D.sugNotes.value.trim() : '';
-        if (plat) body.platform = plat;
-        if (name) body.user_name = name;
-        if (email) body.user_email = email;
-        if (notes) body.notes = notes;
-        post('suggestions', body).then(function () {
+        if (sugPlatform && sugPlatform.value.trim()) body.platform = sugPlatform.value.trim();
+        if (sugName && sugName.value.trim()) body.user_name = sugName.value.trim();
+        if (sugEmail && sugEmail.value.trim()) body.user_email = sugEmail.value.trim();
+        if (sugNotes && sugNotes.value.trim()) body.notes = sugNotes.value.trim();
+        apiPost('suggestions', body, false).then(function () {
             toast('Suggestion submitted!', 'success');
-            if (D.sugForm) D.sugForm.reset();
-            if (D.dupWarn) D.dupWarn.classList.remove('visible');
-            log('suggestion', { title: title, link: link });
-            if (S.tab === 'suggestions') loadSuggestions();
+            if (sugForm) sugForm.reset();
+            if (dupWarn) dupWarn.classList.remove('visible');
+            logAct('suggestion', { title: title, link: link });
+            if (S.tab === 'suggestions') loadSugs();
         }).catch(function (err) { toast(err.message || 'Submit failed.', 'error'); });
     }
 
     function checkDup() {
-        var link = D.sugLink ? D.sugLink.value.trim() : '';
+        var link = sugLink ? sugLink.value.trim() : '';
         if (!link || !/^https?:\/\//.test(link)) return;
-        get('courses', { link: 'eq.' + link, select: 'id,title', limit: 1 }).then(function (r) {
-            if (r.data.length && D.dupWarn) { D.dupWarn.innerHTML = '&#9888; Already exists: <strong>' + esc(r.data[0].title) + '</strong>'; D.dupWarn.classList.add('visible'); }
-            else if (D.dupWarn) D.dupWarn.classList.remove('visible');
+        apiGet('courses', { link: 'eq.' + link, select: 'id,title', limit: 1 }).then(function (r) {
+            if (!dupWarn) return;
+            if (r.data.length) { dupWarn.innerHTML = '&#9888; Already exists: <strong>' + esc(r.data[0].title) + '</strong>'; dupWarn.classList.add('visible'); }
+            else dupWarn.classList.remove('visible');
         }).catch(function () { });
     }
 
-    // ===== RATINGS =====
+    /* ===== RATINGS ===== */
     var pRate = { id: null, title: '' };
     function openRate(id, title) {
         pRate = { id: id, title: title };
-        if (D.rateTitle) D.rateTitle.textContent = title;
-        if (D.rateFeedback) D.rateFeedback.textContent = '';
-        $$('.rating-picker-stars .star').forEach(function (s) { s.classList.remove('active'); });
-        if (D.rateOverlay) D.rateOverlay.classList.add('active');
+        if (rateTitle) rateTitle.textContent = title;
+        if (rateFb) rateFb.textContent = '';
+        var all = qsa('.rating-picker-stars .star');
+        for (var i = 0; i < all.length; i++) all[i].classList.remove('active');
+        if (rateOvl) rateOvl.classList.add('active');
     }
-    function closeRate() { if (D.rateOverlay) D.rateOverlay.classList.remove('active'); }
+    function closeRate() { if (rateOvl) rateOvl.classList.remove('active'); }
     function rateHover(e) {
-        var s = e.target.closest('.star'); if (!s) return;
+        var s = e.target.closest('.star');
+        if (!s) return;
         var v = parseInt(s.getAttribute('data-value'), 10);
-        $$('.rating-picker-stars .star').forEach(function (st) { st.classList.toggle('active', parseInt(st.getAttribute('data-value'), 10) <= v); });
-        if (D.rateFeedback) D.rateFeedback.textContent = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][v] || '';
+        var all = qsa('.rating-picker-stars .star');
+        for (var i = 0; i < all.length; i++) all[i].classList.toggle('active', parseInt(all[i].getAttribute('data-value'), 10) <= v);
+        if (rateFb) rateFb.textContent = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][v] || '';
     }
-    function rateHoverOut() { $$('.rating-picker-stars .star').forEach(function (s) { s.classList.remove('active'); }); if (D.rateFeedback) D.rateFeedback.textContent = ''; }
+    function rateHoverOut() {
+        var all = qsa('.rating-picker-stars .star');
+        for (var i = 0; i < all.length; i++) all[i].classList.remove('active');
+        if (rateFb) rateFb.textContent = '';
+    }
     function rateClick(e) {
-        var s = e.target.closest('.star'); if (!s || !pRate.id) return;
+        var s = e.target.closest('.star');
+        if (!s || !pRate.id) return;
         var v = parseInt(s.getAttribute('data-value'), 10);
-        post('ratings', { course_id: pRate.id, rating: v }).then(function () {
-            toast('Rated ' + v + ' stars!', 'success'); closeRate(); log('rating', { id: pRate.id, rating: v }); loadCourses();
+        apiPost('ratings', { course_id: pRate.id, rating: v }, false).then(function () {
+            toast('Rated ' + v + ' stars!', 'success');
+            closeRate();
+            logAct('rating', { id: pRate.id, rating: v });
+            loadCourses();
         }).catch(function (err) { toast(err.message || 'Rating failed.', 'error'); closeRate(); });
     }
 
-    // ===== STATS =====
+    /* ===== STATS ===== */
     function loadStats() {
-        get('courses', { status: 'eq.active', select: 'id', limit: 1 }).then(function (r) {
-            if (D.courseCount) D.courseCount.textContent = r.total || 0;
+        apiGet('courses', { status: 'eq.active', select: 'id', limit: 1 }).then(function (r) {
+            if (courseCountEl) courseCountEl.textContent = r.total || 0;
         }).catch(function () { });
     }
 
-    // ===== LOGGING (NO sendBeacon — uses fetch with keepalive) =====
-    function log(action, details) {
+    /* ===== ACTIVITY LOGGING ===== */
+    function logAct(action, details) {
         details = details || {};
         try {
             fetch(FN + '/log-activity', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-                body: JSON.stringify({ action: action, details: details, session_id: S.sid, screen_size: innerWidth + 'x' + innerHeight, referrer: document.referrer || null }),
+                headers: { 'Content-Type': 'application/json', 'apikey': CFG_KEY },
+                body: JSON.stringify({
+                    action: action,
+                    details: details,
+                    session_id: S.sid,
+                    screen_size: window.innerWidth + 'x' + window.innerHeight,
+                    referrer: document.referrer || null
+                }),
                 keepalive: true
             }).catch(function () { });
-        } catch (e) { }
+        } catch (e) { /* silent */ }
     }
 
-    // ===== HELPERS =====
+    /* ===== UI HELPERS ===== */
     function toast(msg, type) {
-        if (!D.toasts) return;
+        if (!toasts) return;
         var t = document.createElement('div');
         t.className = 'toast toast-' + (type || 'info');
         t.textContent = msg;
-        D.toasts.appendChild(t);
+        toasts.appendChild(t);
         setTimeout(function () { if (t.parentNode) t.remove(); }, 4000);
     }
-    function showLoading() { if (D.grid) D.grid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><span class="loading-text">Loading...</span></div>'; }
-    function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-    function escA(s) { return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;'); }
-    function fmtDate(d) { if (!d) return ''; try { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { return d; } }
+
+    function showLoading() {
+        if (!grid) return;
+        grid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><span class="loading-text">Loading courses...</span></div>';
+    }
+
 })();
