@@ -1,15 +1,30 @@
-node_modules/
+# ==========================================================================
+# Courseundo — Git Ignore
+# ==========================================================================
+
+# Environment
 .env
 .env.local
 .env.*.local
-dist/
-build/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Supabase local dev
+supabase/.temp/
+supabase/.branches/
+
+# OS
 .DS_Store
-*.log
-supabase/
-.supabase/
-.idea/
-.vscode/
+Thumbs.db
 *.swp
-*.swo
-~*
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-workspace
+
+# Logs
+*.log

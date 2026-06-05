@@ -1,53 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CourseUndo - Semantic Course Discovery</title>
+    <title>Courseundo — Discover Free Online Courses</title>
+    <meta name="description"
+        content="Discover, organize, and share free online courses with AI-powered search, community suggestions, and public ratings.">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
 </head>
+
 <body>
-    <header>
-        <nav class="navbar">
-            <div class="nav-container">
-                <h1 class="logo">CourseUndo</h1>
-                <ul class="nav-links">
-                    <li><a href="#search">Search</a></li>
-                    <li><a href="#about">About</a></li>
-                    <li><a href="admin.html">Admin</a></li>
-                </ul>
-            </div>
-        </nav>
-    </header>
+    <div class="app-wrapper">
 
-    <main>
-        <section id="search" class="search-section">
-            <h2>Find Your Course Match</h2>
-            <div class="search-container">
-                <input 
-                    type="text" 
-                    id="searchInput" 
-                    class="search-input" 
-                    placeholder="Describe what you want to learn..."
-                >
-                <button id="searchButton" class="btn btn-primary">Search</button>
+        <!-- ========== Header ========== -->
+        <header class="site-header">
+            <div class="container">
+                <div class="header-inner">
+                    <div class="site-brand">
+                        <h1 class="site-title">Course<span>undo</span></h1>
+                        <p class="site-tagline">Discover free courses &middot; AI-powered search &middot;
+                            Community-driven</p>
+                    </div>
+                    <div class="header-stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="header-course-count">0</div>
+                            <div class="stat-label">Courses</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="header-search-count">0</div>
+                            <div class="stat-label">Searches</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div id="results" class="results-container"></div>
+        </header>
+
+        <!-- ========== Search Section ========== -->
+        <section class="search-section">
+            <div class="container">
+                <div class="search-bar-wrapper">
+                    <span class="search-icon">&#128269;</span>
+                    <input type="text" id="search-input" class="search-bar"
+                        placeholder="Search courses — try &quot;beginner Python with free certificate&quot;"
+                        autocomplete="off" aria-label="Search courses">
+                    <button id="search-btn" class="btn btn-primary"
+                        style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);padding:0.5rem 1rem;border-radius:var(--radius-md)">
+                        Search
+                    </button>
+                </div>
+                <div id="search-mode" class="search-mode-indicator">
+                    <span class="dot" style="background:var(--text-muted)"></span> Keyword search
+                </div>
+            </div>
         </section>
 
-        <section id="about" class="about-section">
-            <h2>About CourseUndo</h2>
-            <p>
-                CourseUndo uses advanced semantic search and AI classification to help you find 
-                the perfect courses based on your learning goals.
-            </p>
-        </section>
-    </main>
+        <!-- ========== Filters ========== -->
+        <section class="container">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-platform">Platform</label>
+                    <select id="filter-platform" class="filter-select">
+                        <option value="">All Platforms</option>
+                        <option value="Coursera">Coursera</option>
+                        <option value="edX">edX</option>
+                        <option value="Udemy">Udemy</option>
+                        <option value="Khan Academy">Khan Academy</option>
+                        <option value="Udacity">Udacity</option>
+                        <option value="FutureLearn">FutureLearn</option>
+                        <option value="LinkedIn Learning">LinkedIn Learning</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-category">Category</label>
+                    <select id="filter-category" class="filter-select">
+                        <option value="">All Categories</option>
+                        <option value="Programming">Programming</option>
+                        <option value="Data Science">Data Science</option>
+                        <option value="AI/ML">AI/ML</option>
+                        <option value="Business">Business</option>
+                        <option value="Design">Design</option>
+                        <option value="Language">Language</option>
+                        <option value="Math">Math</option>
+                        <option value="Science">Science</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-difficulty">Difficulty</label>
+                    <select id="filter-difficulty" class="filter-select">
+                        <option value="">Any Level</option>
+                        <option value="Beginner">Beginner</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Advanced">Advanced</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-cost">Cost</label>
+                    <select id="filter-cost" class="filter-select">
+                        <option value="">Any Cost</option>
+                        <option value="Free">Free</option>
+                        <option value="Paid">Paid</option>
+                        <option value="Subscription">Subscription</option>
+                        <option value="Freemium">Freemium</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-certification">Certificate</label>
+                    <select id="filter-certification" class="filter-select">
+                        <option value="">Any</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="filter-job-available">Jobs</label>
+                    <select id="filter-job-available" class="filter-select">
+                        <option value="">Any</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+            </div>
 
-    <footer>
-        <p>&copy; 2024 CourseUndo. All rights reserved.</p>
-    </footer>
+            <div class="sort-row">
+                <span id="results-count" class="results-count"><strong>0</strong> courses</span>
+                <div class="flex" style="gap:0.75rem;align-items:center">
+                    <select id="sort-select" class="filter-select" aria-label="Sort results">
+                        <option value="relevance">Relevance</option>
+                        <option value="rating-high">Rating: High to Low</option>
+                        <option value="rating-low">Rating: Low to High</option>
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="alpha-az">Alphabetical: A-Z</option>
+                        <option value="alpha-za">Alphabetical: Z-A</option>
+                        <option value="cost-free">Cost: Free First</option>
+                    </select>
+                    <button id="clear-filters" class="clear-filters-btn">Clear Filters</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== Tabs ========== -->
+        <main class="container">
+            <nav class="tabs-nav" role="tablist">
+                <button class="tab-btn active" data-tab="courses" role="tab" aria-selected="true">Courses</button>
+                <button class="tab-btn" data-tab="suggestions" role="tab">Community Suggestions</button>
+                <button class="tab-btn" data-tab="suggest" role="tab">Suggest a Course</button>
+            </nav>
+
+            <!-- Tab: Courses -->
+            <div id="panel-courses" class="tab-panel active" role="tabpanel">
+                <div id="courses-grid" class="courses-grid">
+                    <!-- Course cards rendered by JS -->
+                </div>
+                <div id="pagination" class="pagination"></div>
+            </div>
+
+            <!-- Tab: Community Suggestions -->
+            <div id="panel-suggestions" class="tab-panel" role="tabpanel">
+                <div id="suggestions-list">
+                    <!-- Suggestions rendered by JS -->
+                </div>
+            </div>
+
+            <!-- Tab: Suggest a Course -->
+            <div id="panel-suggest" class="tab-panel" role="tabpanel">
+                <form id="suggest-form" class="suggest-form" autocomplete="off">
+                    <div class="form-group" style="position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden">
+                        <label for="sug-website">Website</label>
+                        <input type="text" id="sug-website" name="website" tabindex="-1" autocomplete="off">
+                    </div>
+
+                    <h2
+                        style="font-family:var(--font-display);font-size:1.5rem;font-weight:400;color:var(--text-primary)">
+                        Recommend a Course</h2>
+                    <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.5rem">Know a great course?
+                        Share it with the community. Your suggestion will be reviewed by our admin.</p>
+
+                    <div class="form-group">
+                        <label class="form-label" for="sug-title">Course Title <span class="required">*</span></label>
+                        <input type="text" id="sug-title" class="form-input"
+                            placeholder="e.g., Machine Learning Specialization" required minlength="5" maxlength="200">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="sug-link">Course URL <span class="required">*</span></label>
+                        <input type="url" id="sug-link" class="form-input" placeholder="https://coursera.org/learn/..."
+                            required>
+                        <div id="duplicate-warning" class="duplicate-warning"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="sug-platform">Platform</label>
+                        <input type="text" id="sug-platform" class="form-input"
+                            placeholder="Coursera, edX, Udemy, etc.">
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                        <div class="form-group">
+                            <label class="form-label" for="sug-name">Your Name</label>
+                            <input type="text" id="sug-name" class="form-input" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="sug-email">Your Email</label>
+                            <input type="email" id="sug-email" class="form-input" placeholder="For notification only">
+                            <span class="form-hint">We'll notify you when your suggestion is reviewed.</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="sug-notes">Notes</label>
+                        <textarea id="sug-notes" class="form-textarea" placeholder="Why do you recommend this course?"
+                            maxlength="2000" rows="3"></textarea>
+                    </div>
+
+                    <div>
+                        <button type="submit" class="btn btn-primary">Submit Suggestion</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+
+        <!-- ========== Rating Picker Overlay ========== -->
+        <div id="rating-overlay" class="rating-picker-overlay" role="dialog" aria-label="Rate this course">
+            <div class="rating-picker">
+                <h3 id="rating-course-title">Rate this course</h3>
+                <div id="rating-stars" class="rating-picker-stars">
+                    <span class="star" data-value="1">&#9733;</span>
+                    <span class="star" data-value="2">&#9733;</span>
+                    <span class="star" data-value="3">&#9733;</span>
+                    <span class="star" data-value="4">&#9733;</span>
+                    <span class="star" data-value="5">&#9733;</span>
+                </div>
+                <div id="rating-feedback" class="rating-feedback"></div>
+            </div>
+        </div>
+
+        <!-- ========== Toast Container ========== -->
+        <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+        <!-- ========== Loading Overlay ========== -->
+        <div id="loading-overlay" class="loading-spinner hidden">
+            <div class="spinner"></div>
+            <span class="loading-text">Loading courses...</span>
+        </div>
+
+        <!-- ========== Footer ========== -->
+        <footer class="site-footer">
+            <div class="container">
+                <p>Courseundo &mdash; Open source, free forever. Built with Supabase, GitHub Pages, and AI.</p>
+            </div>
+        </footer>
+
+    </div>
 
     <script src="js/app.js"></script>
 </body>
+
 </html>

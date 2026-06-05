@@ -1,48 +1,68 @@
 #!/bin/bash
-
-# CourseUndo Deployment Script
-# Deploys all functions and migrations to Supabase
+# ==========================================================================
+# Courseundo — Deployment Script
+# Usage: chmod +x deploy.sh && ./deploy.sh
+# ==========================================================================
 
 set -e
 
-echo "🚀 CourseUndo Deployment Script"
-echo "================================"
+echo "========================================"
+echo "  Courseundo — Deployment"
+echo "========================================"
+echo ""
 
-# Check environment variables
-if [ -z "$SUPABASE_PROJECT_ID" ]; then
-    echo "❌ Error: SUPABASE_PROJECT_ID environment variable not set"
+# Check prerequisites
+if ! command -v supabase &> /dev/null; then
+    echo "ERROR: Supabase CLI not found."
+    echo "Install it: npm install -g supabase"
     exit 1
 fi
 
-if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
-    echo "❌ Error: SUPABASE_ACCESS_TOKEN environment variable not set"
+# Check if linked to a project
+if ! supabase projects list &> /dev/null; then
+    echo "ERROR: Not logged in to Supabase."
+    echo "Run: supabase login"
     exit 1
 fi
 
-# Change to supabase directory
-cd "$(dirname "$0")/supabase" || exit 1
+echo "Step 1: Linking to Supabase project..."
+echo "  (Skip if already linked)"
+echo ""
+# Uncomment and set your project ref:
+# supabase link --project-ref YOUR_PROJECT_REF
 
-echo "📦 Installing Supabase CLI..."
-# Supabase CLI should be installed globally or via npm
+echo "Step 2: Deploying Edge Functions..."
+echo ""
 
-echo "🔄 Deploying functions..."
+FUNCTIONS=(
+  "classify-course"
+  "extract-metadata"
+  "generate-embedding"
+  "semantic-search"
+  "send-notification"
+  "log-activity"
+)
 
-# Deploy individual functions
-supabase functions deploy classify-course --project-ref "$SUPABASE_PROJECT_ID"
-supabase functions deploy extract-metadata --project-ref "$SUPABASE_PROJECT_ID"
-supabase functions deploy generate-embedding --project-ref "$SUPABASE_PROJECT_ID"
-supabase functions deploy semantic-search --project-ref "$SUPABASE_PROJECT_ID"
-supabase functions deploy send-notification --project-ref "$SUPABASE_PROJECT_ID"
-supabase functions deploy log-activity --project-ref "$SUPABASE_PROJECT_ID"
+for fn in "${FUNCTIONS[@]}"; do
+  echo "  Deploying: $fn"
+  supabase functions deploy "$fn"
+  echo "  ✓ $fn deployed"
+done
 
-echo "📊 Pushing database migrations..."
-supabase db push --project-ref "$SUPABASE_PROJECT_ID"
+echo ""
+echo "Step 3: Setting environment secrets..."
+echo "  (Skipped — set manually with: supabase secrets set KEY=VALUE)"
+echo ""
 
-echo "✅ Deployment complete!"
+echo "========================================"
+echo "  Deployment Complete!"
+echo "========================================"
 echo ""
 echo "Next steps:"
-echo "1. Visit https://app.supabase.com to verify deployment"
-echo "2. Configure environment variables in .env"
-echo "3. Test the functions via API"
-
-exit 0
+echo "  1. Set secrets: supabase secrets set GROQ_API_KEY=xxx GEMINI_API_KEY=xxx RESEND_API_KEY=xxx"
+echo "  2. Set secrets: supabase secrets set ADMIN_EMAIL=admin@example.com FRONTEND_URL=https://..."
+echo "  3. Push frontend files to GitHub"
+echo "  4. Enable GitHub Pages"
+echo "  5. Update SUPABASE_URL and SUPABASE_ANON_KEY in js/app.js and js/admin.js"
+echo ""
+echo "Test: curl https://YOUR_REF.supabase.co/functions/v1/classify-course -H 'Authorization: Bearer YOUR_ANON_KEY'"

@@ -1,87 +1,416 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CourseUndo - Admin Dashboard</title>
+    <title>Courseundo — Admin Dashboard</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙</text></svg>">
 </head>
-<body>
-    <header>
-        <nav class="navbar">
-            <div class="nav-container">
-                <h1 class="logo">CourseUndo Admin</h1>
-                <ul class="nav-links">
-                    <li><a href="index.html">Back to Site</a></li>
-                    <li><a href="#" id="logoutBtn">Logout</a></li>
-                </ul>
-            </div>
-        </nav>
-    </header>
 
-    <main class="admin-main">
+<body>
+
+    <!-- ========== Login Screen ========== -->
+    <div id="login-wrapper" class="admin-login-wrapper">
+        <div class="admin-login-card">
+            <h1>Course<span>undo</span></h1>
+            <p class="login-subtitle">Admin Dashboard</p>
+            <div id="login-error" class="login-error"></div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label class="form-label" for="login-email">Email</label>
+                    <input type="email" id="login-email" class="form-input" placeholder="admin@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="login-password">Password</label>
+                    <input type="password" id="login-password" class="form-input" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========== Dashboard ========== -->
+    <div id="dashboard-wrapper" class="admin-wrapper hidden">
+
+        <!-- Sidebar -->
         <aside class="admin-sidebar">
-            <ul class="admin-menu">
-                <li><a href="#dashboard" class="menu-item active">Dashboard</a></li>
-                <li><a href="#courses" class="menu-item">Courses</a></li>
-                <li><a href="#functions" class="menu-item">Functions</a></li>
-                <li><a href="#logs" class="menu-item">Logs</a></li>
-                <li><a href="#settings" class="menu-item">Settings</a></li>
-            </ul>
+            <div class="admin-sidebar-brand">Course<span>undo</span></div>
+            <nav class="admin-nav">
+                <button class="admin-nav-item active" data-tab="courses">&#128218; <span>Courses</span></button>
+                <button class="admin-nav-item" data-tab="bulk">&#128229; <span>Bulk Ops</span></button>
+                <button class="admin-nav-item" data-tab="suggestions">&#9993; <span>Suggestions</span>
+                    <span id="suggestion-badge" class="badge hidden">0</span>
+                </button>
+                <button class="admin-nav-item" data-tab="ratings">&#11088; <span>Ratings</span></button>
+                <button class="admin-nav-item" data-tab="logs">&#128203; <span>Activity Log</span></button>
+                <button class="admin-nav-item" data-tab="analytics">&#128202; <span>Analytics</span></button>
+            </nav>
+            <div style="padding:0.75rem;margin-top:auto">
+                <button id="logout-btn" class="btn btn-secondary btn-sm" style="width:100%">Sign Out</button>
+            </div>
         </aside>
 
-        <section class="admin-content">
-            <div id="dashboard" class="content-section active">
-                <h2>Dashboard</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>Total Courses</h3>
-                        <p id="totalCourses">0</p>
+        <!-- Main Content -->
+        <main class="admin-main">
+
+            <!-- Tab: Courses -->
+            <div id="tab-courses" class="admin-tab-panel active">
+                <h2 class="admin-page-title">Courses</h2>
+
+                <div style="display:flex;gap:1rem;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap">
+                    <input type="text" id="course-search" class="form-input" placeholder="Search courses..."
+                        style="max-width:300px;padding:0.5rem 0.75rem;font-size:0.85rem">
+                    <label
+                        style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);display:flex;align-items:center;gap:0.4rem;cursor:pointer">
+                        <input type="checkbox" id="show-archived"> Show Archived
+                    </label>
+                    <button id="new-course-btn" class="btn btn-secondary btn-sm" style="margin-left:auto">+ New
+                        Course</button>
+                </div>
+
+                <div id="admin-course-list" class="admin-course-list"></div>
+
+                <h3 id="course-form-title"
+                    style="font-family:var(--font-display);font-size:1.3rem;font-weight:400;margin:1.5rem 0 1rem;color:var(--text-primary)">
+                    Add New Course</h3>
+                <p id="course-field-status"
+                    style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);margin-bottom:1rem">
+                </p>
+
+                <form id="course-form">
+                    <div class="admin-form-grid">
+                        <div class="form-group full-width">
+                            <label class="form-label" for="course-title">Title <span class="required">*</span></label>
+                            <input type="text" id="course-title" class="form-input"
+                                placeholder="Course title (5-200 chars)" required minlength="5" maxlength="200">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label" for="course-link">Link <span class="required">*</span></label>
+                            <div style="display:flex;gap:0.5rem">
+                                <input type="url" id="course-link" class="form-input" placeholder="https://..." required
+                                    style="flex:1">
+                                <button type="button" id="fetch-meta-btn" class="btn btn-secondary btn-sm">Auto-fetch
+                                    Metadata</button>
+                                <button type="button" id="ai-classify-btn" class="btn btn-secondary btn-sm">AI
+                                    Classify</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-platform">Platform</label>
+                            <input type="text" id="course-platform" class="form-input" list="platform-suggestions"
+                                placeholder="Coursera, edX...">
+                            <datalist id="platform-suggestions">
+                                <option value="Coursera">
+                                <option value="edX">
+                                <option value="Udemy">
+                                <option value="Khan Academy">
+                                <option value="Udacity">
+                                <option value="FutureLearn">
+                                <option value="LinkedIn Learning">
+                                <option value="Other">
+                            </datalist>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-category">Category</label>
+                            <input type="text" id="course-category" class="form-input" list="category-suggestions"
+                                placeholder="Programming, Data Science...">
+                            <datalist id="category-suggestions">
+                                <option value="Programming">
+                                <option value="Data Science">
+                                <option value="AI/ML">
+                                <option value="Business">
+                                <option value="Design">
+                                <option value="Language">
+                                <option value="Math">
+                                <option value="Science">
+                                <option value="Other">
+                            </datalist>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-institution">Institution</label>
+                            <input type="text" id="course-institution" class="form-input"
+                                placeholder="University or company">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-instructor">Instructor</label>
+                            <input type="text" id="course-instructor" class="form-input"
+                                placeholder="Lead instructor name(s)">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-difficulty">Difficulty</label>
+                            <select id="course-difficulty" class="form-input">
+                                <option value="">—</option>
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-duration">Duration</label>
+                            <input type="text" id="course-duration" class="form-input"
+                                placeholder="e.g., 30 hours, 6 weeks">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-mode">Mode</label>
+                            <input type="text" id="course-mode" class="form-input" list="mode-suggestions"
+                                placeholder="Self-paced, Instructor-led">
+                            <datalist id="mode-suggestions">
+                                <option value="Self-paced">
+                                <option value="Instructor-led">
+                            </datalist>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-format">Format</label>
+                            <input type="text" id="course-format" class="form-input" list="format-suggestions"
+                                placeholder="Video, Text, Interactive, Mixed">
+                            <datalist id="format-suggestions">
+                                <option value="Video">
+                                <option value="Text">
+                                <option value="Interactive">
+                                <option value="Mixed">
+                            </datalist>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-cost">Cost</label>
+                            <select id="course-cost" class="form-input">
+                                <option value="">—</option>
+                                <option value="Free">Free</option>
+                                <option value="Paid">Paid</option>
+                                <option value="Subscription">Subscription</option>
+                                <option value="Freemium">Freemium</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-certification">Certification</label>
+                            <select id="course-certification" class="form-input">
+                                <option value="">—</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-cert-type">Certification Type</label>
+                            <input type="text" id="course-cert-type" class="form-input" list="cert-type-suggestions"
+                                placeholder="Free, Paid, Verified...">
+                            <datalist id="cert-type-suggestions">
+                                <option value="Free">
+                                <option value="Paid">
+                                <option value="Verified">
+                                <option value="Industry Badge">
+                            </datalist>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-validation">Validation</label>
+                            <input type="text" id="course-validation" class="form-input"
+                                placeholder="Accredited, Industry badge...">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-job-available">Job Availability</label>
+                            <select id="course-job-available" class="form-input">
+                                <option value="">—</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-job-country">Job Country</label>
+                            <input type="text" id="course-job-country" class="form-input"
+                                placeholder="USA, India, Remote...">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-job-salary">Job Salary Range</label>
+                            <input type="text" id="course-job-salary" class="form-input" placeholder="$60k-$90k">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-job-mode">Job Mode</label>
+                            <input type="text" id="course-job-mode" class="form-input" list="job-mode-suggestions"
+                                placeholder="Remote, On-site, Hybrid">
+                            <datalist id="job-mode-suggestions">
+                                <option value="Remote">
+                                <option value="On-site">
+                                <option value="Hybrid">
+                            </datalist>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="course-language">Language</label>
+                            <input type="text" id="course-language" class="form-input" list="language-suggestions"
+                                placeholder="English, Spanish...">
+                            <datalist id="language-suggestions">
+                                <option value="English">
+                                <option value="Spanish">
+                                <option value="French">
+                                <option value="German">
+                                <option value="Chinese">
+                                <option value="Arabic">
+                                <option value="Portuguese">
+                                <option value="Hindi">
+                                <option value="Japanese">
+                            </datalist>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label" for="course-extra-fields">Extra Fields (JSON)</label>
+                            <textarea id="course-extra-fields" class="form-input json-input"
+                                placeholder='{"prerequisite": "Basic Python", "projects": 3}'></textarea>
+                            <span id="json-feedback" class="form-hint"></span>
+                        </div>
                     </div>
-                    <div class="stat-card">
-                        <h3>Total Users</h3>
-                        <p id="totalUsers">0</p>
+
+                    <div class="form-actions-bar">
+                        <button type="submit" id="save-course-btn" class="btn btn-primary">Save Course</button>
+                        <button type="button" id="archive-course-btn" class="btn btn-danger hidden">Archive</button>
+                        <button type="button" id="verify-course-btn" class="btn btn-secondary hidden">Mark as
+                            Verified</button>
                     </div>
-                    <div class="stat-card">
-                        <h3>Searches Today</h3>
-                        <p id="searchesToday">0</p>
-                    </div>
+                </form>
+            </div>
+
+            <!-- Tab: Bulk Operations -->
+            <div id="tab-bulk" class="admin-tab-panel">
+                <h2 class="admin-page-title">Bulk Operations</h2>
+
+                <h3
+                    style="font-family:var(--font-display);font-size:1.2rem;font-weight:400;margin-bottom:1rem;color:var(--text-primary)">
+                    Import</h3>
+                <div id="file-drop-zone" class="file-drop-zone">
+                    <p>Drop a CSV or JSON file here, or click to browse</p>
+                    <p class="file-types">Supported: .csv (columns: title, link, platform, ...) or .json (array of
+                        course objects)</p>
+                    <input type="file" id="file-input" accept=".csv,.json" style="display:none">
+                </div>
+                <div id="import-preview" class="import-preview"></div>
+                <div id="import-summary" class="import-summary"></div>
+                <button id="import-btn" class="btn btn-primary mt-2 hidden">Import Valid Rows</button>
+
+                <h3
+                    style="font-family:var(--font-display);font-size:1.2rem;font-weight:400;margin:2rem 0 1rem;color:var(--text-primary)">
+                    Export</h3>
+                <div style="display:flex;gap:0.75rem">
+                    <button id="export-csv-btn" class="btn btn-secondary">Export All (CSV)</button>
+                    <button id="export-json-btn" class="btn btn-secondary">Export All (JSON)</button>
                 </div>
             </div>
 
-            <div id="courses" class="content-section">
-                <h2>Manage Courses</h2>
-                <button class="btn btn-primary" id="addCourseBtn">Add Course</button>
-                <div id="coursesList" class="table-container"></div>
+            <!-- Tab: Suggestions -->
+            <div id="tab-suggestions" class="admin-tab-panel">
+                <h2 class="admin-page-title">Suggestions</h2>
+                <div id="admin-suggestions-list"></div>
             </div>
 
-            <div id="functions" class="content-section">
-                <h2>Cloud Functions</h2>
-                <div id="functionsList" class="function-list"></div>
+            <!-- Tab: Ratings -->
+            <div id="tab-ratings" class="admin-tab-panel">
+                <h2 class="admin-page-title">Ratings Management</h2>
+                <div id="ratings-container"></div>
             </div>
 
-            <div id="logs" class="content-section">
-                <h2>Activity Logs</h2>
-                <div id="logsList" class="logs-container"></div>
-            </div>
+            <!-- Tab: Activity Log -->
+            <div id="tab-logs" class="admin-tab-panel">
+                <h2 class="admin-page-title">Activity Log</h2>
 
-            <div id="settings" class="content-section">
-                <h2>Settings</h2>
-                <form id="settingsForm">
-                    <div class="form-group">
-                        <label>API Key</label>
-                        <input type="password" id="apiKey" />
+                <div class="log-filter-bar">
+                    <div class="filter-group">
+                        <label class="filter-label" for="log-filter-action">Action</label>
+                        <select id="log-filter-action" class="filter-select">
+                            <option value="">All</option>
+                            <option value="search">Search</option>
+                            <option value="course_click">Course Click</option>
+                            <option value="suggestion">Suggestion</option>
+                            <option value="rating">Rating</option>
+                            <option value="page_visit">Page Visit</option>
+                            <option value="admin_login">Admin Login</option>
+                            <option value="admin_login_fail">Login Fail</option>
+                        </select>
                     </div>
-                    <button type="submit" class="btn btn-primary">Save Settings</button>
-                </form>
-            </div>
-        </section>
-    </main>
+                    <div class="filter-group">
+                        <label class="filter-label" for="log-filter-from">From</label>
+                        <input type="date" id="log-filter-from" class="form-input"
+                            style="padding:0.5rem;font-size:0.8rem">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label" for="log-filter-to">To</label>
+                        <input type="date" id="log-filter-to" class="form-input"
+                            style="padding:0.5rem;font-size:0.8rem">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label" for="log-filter-ip">IP Address</label>
+                        <input type="text" id="log-filter-ip" class="form-input" placeholder="e.g., 192.168.1.1"
+                            style="padding:0.5rem;font-size:0.8rem">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label" for="log-filter-device">Device</label>
+                        <select id="log-filter-device" class="filter-select">
+                            <option value="">All</option>
+                            <option value="Desktop">Desktop</option>
+                            <option value="Mobile">Mobile</option>
+                            <option value="Tablet">Tablet</option>
+                        </select>
+                    </div>
+                    <button id="log-apply-filter" class="btn btn-secondary btn-sm">Apply</button>
+                    <button id="log-export-btn" class="btn btn-secondary btn-sm">Export CSV</button>
+                </div>
 
-    <footer>
-        <p>&copy; 2024 CourseUndo Admin. All rights reserved.</p>
-    </footer>
+                <div class="log-table-wrapper">
+                    <table class="log-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Action</th>
+                                <th>Details</th>
+                                <th>IP</th>
+                                <th>Country</th>
+                                <th>Device</th>
+                                <th>Browser</th>
+                                <th>OS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab: Analytics -->
+            <div id="tab-analytics" class="admin-tab-panel">
+                <h2 class="admin-page-title">Analytics</h2>
+                <div id="analytics-container"></div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ========== Modal ========== -->
+    <div id="admin-modal" class="modal-overlay">
+        <div class="modal">
+            <h3 id="modal-title"></h3>
+            <div id="modal-body"></div>
+            <div id="modal-actions" class="modal-actions"></div>
+        </div>
+    </div>
+
+    <!-- ========== Toast ========== -->
+    <div id="admin-toast-container" class="toast-container" aria-live="polite"></div>
 
     <script src="js/admin.js"></script>
 </body>
+
 </html>
